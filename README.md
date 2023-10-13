@@ -8,42 +8,27 @@ This project implements a multi-layer perceptron neural network from scratch in 
     - [Training Example](#Training-Example)
     - [Preprocessing](#Preprocessing)
 2. [Neural Network Architecture](#Neural-Network-Architecture)
-    - [Input layer](#Input-layer)
-    - [Hidden layers](#Hidden-layers)
-    - [Output layer](#Output-layer)
-    - [Hiperparameters](#Hiperparameters)
 3. [Forward propagation](#Forward-propagation)
-    - [Implementation in Python](#Implementation-in-Python)
-    - [Explanation](#Explanation)
-4. [Loss Function: Cross-entropy](#Loss-Function:-Cross-entropy)
-5. [Learning and Optimization: Gradient Descent](#Learning-and-Optimization:-Gradient-Descent)
-    - [Implementation](#Implementation)
+4. [Loss Function: Cross-entropy](#Loss-Function-Cross-entropy)
+5. [Learning and Optimization: Gradient Descent](#Learning-and-Optimization-Gradient-Descent)
 6. [Real-Time Digit Recognition]()
 7. [Comparison with TensorFlow](#Comparison-with-TensorFlow)
 
 ##### Screenshots
-<img src="screenshots/0.png" width="20%" height="20%">
-<img src="screenshots/1.png" width="20%" height="20%">
-<img src="screenshots/2.png" width="20%" height="20%">
-<img src="screenshots/3.png" width="20%" height="20%">
+<img src="screenshots/0.png" width="20%" height="20%"> <img src="screenshots/1.png" width="20%" height="20%"> <img src="screenshots/2.png" width="20%" height="20%"> <img src="screenshots/3.png" width="20%" height="20%">
 
-<img src="screenshots/4.png" width="20%" height="20%">
-<img src="screenshots/5.png" width="20%" height="20%">
-<img src="screenshots/6.png" width="20%" height="20%">
-<img src="screenshots/7.png" width="20%" height="20%">
+<img src="screenshots/4.png" width="20%" height="20%"> <img src="screenshots/5.png" width="20%" height="20%"> <img src="screenshots/6.png" width="20%" height="20%"> <img src="screenshots/7.png" width="20%" height="20%">
 
-<img src="screenshots/8.png" width="20%" height="20%">
-<img src="screenshots/9.png" width="20%" height="20%">
-<img src="screenshots/42.png" width="20%" height="20%">
+<img src="screenshots/8.png" width="20%" height="20%"> <img src="screenshots/9.png" width="20%" height="20%"> <img src="screenshots/42.png" width="20%" height="20%">
 
 ##### Cross-entropy as loss function
 $$J(p,q) = -\sum_{x}p(x)log(q(x))$$
-[Why cross-entropy?](#Loss-Function:-Cross-entropy)
+[Why cross-entropy?](#Loss-Function-Cross-entropy)
 
 ##### Gradient descent as optimization algorithm
 $$w = w - \alpha \frac{\partial L}{\partial w}$$
 $$b = b - \alpha \frac{\partial L}{\partial b}$$
-[Why gradient descent?](#Learning-and-Optimization:-Gradient-Descent)
+[Why gradient descent?](#Learning-and-Optimization-Gradient-Descent)
 
 ## Dataset
 #### MNIST dataset
