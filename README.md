@@ -66,7 +66,7 @@ def softmax(x):
 - Weight Initialization: [He initialization](https://machinelearningmastery.com/weight-initialization-for-deep-learning-neural-networks/) for weights, and biases are initialized to 0.
 
 #### After 20 epochs, the loss functions doesn't change much...
-<img src="dloss.png" width="50%" height="50%">
+<img src="screenshots/dloss.png" width="50%" height="50%">
 
 #### Model implementation in Python:
 ```python
@@ -160,12 +160,12 @@ y_true * np.log(y_pred) = [0, 0, 0, -0.35, 0, 0, 0, 0, 0, 0]
 
 ln(y_pred) values will be always negative cos 0 < y_pred < 1
 
-<img src="ln.png" width="50%" height="50%">
+<img src="screenshots/ln.png" width="50%" height="50%">
 
 so -np.sum() to positive loss.
 
 #### Loss over epochs
-<img src="loss.png" width="50%" height="50%">
+<img src="screenshots/loss.png" width="50%" height="50%">
 
 ## Learning and Optimization: Gradient Descent
 Backpropagation is an algorithm used to train neural networks by iteratively adjusting the weights and biases in the direction that minimizes the loss function. The update rule for the weights and biases is as follows:
@@ -221,7 +221,9 @@ for i in range(len(layers) - 2):
 ```
 
 ## Real-Time Digit Recognition
-Basic 28x28 canvas to draw whatever you want and the model will have to predict it every second >.<
+After saving the model weights and biases as `scratch_model.npz`, we can import nn_scratch.py and use the `predict()` function.
+
+I build a basic 28x28 canvas using [pygame] and it makes prediction every second.
 
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
@@ -238,9 +240,9 @@ if frames % FPS == 0 and cells.sum() > 0:
 [draw_scratch.py](draw_scratch.py)
 
 ## Comparison with TensorFlow
-The same neural network was implemented using TensorFlow to compare the results. Using the same data.
+I implemented the same model using TensorFlow and the results are quite similar.
 
-| Implementation | Accuracy | Time (s) |
+| | Accuracy | Time (s) |
 | :---: | :---: | :---: |
 | Scratch | 0.934 | 28.9791 |
 | TensorFlow | 0.94 | 6.2679 |
