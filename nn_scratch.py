@@ -6,22 +6,22 @@ import time
 
 def main():
     # Training data
-    train = pd.read_csv("mnist_test.csv", header=None)[:5000]
+    train = pd.read_csv("mnist_train.csv", header=None)[:5000]
     X_train, y_train = train.iloc[:, 1:].values / 255, train.iloc[:, 0].values
 
     # Test data
-    test = pd.read_csv("custom_train.csv", header=None)  # [700:1000]
+    test = pd.read_csv("mnist_test.csv", header=None)[:500]
     X_test, y_test = test.iloc[:, 1:].values / 255, test.iloc[:, 0].values
 
     # Build model
-    layers = [784, 75, 25, 15, 10]
+    layers = [784, 25, 15, 10]
     model = NN(layers)
 
     # Train model
     model.fit(
         X_train,
         y_train,
-        epochs=10,
+        epochs=30,
         learning_rate=0.01,
         batch_size=1,
     )
@@ -41,6 +41,9 @@ class NN:
         self.W = [np.random.randn(b, a) * np.sqrt(2 / a) for a, b in self.layer_dims]
         self.B = [np.zeros(b) for _, b in self.layer_dims]
         self.Z = [np.zeros(c) for c in layers]
+        self.dl_dz = self.Z.copy()
+        self.dl_dw = self.W.copy()
+        self.dl_db = self.B.copy()
 
     def fit(self, X_train, y_train, epochs, learning_rate, batch_size):
         start = time.time()
@@ -57,30 +60,27 @@ class NN:
                 epoch_loss += loss
 
                 """BACKPROP"""
-                dl_dz = [np.zeros(c) for c in self.layers]
-                dl_dw = [np.zeros((b, a)) for a, b in self.layer_dims]
-                dl_db = [np.zeros(b) for _, b in self.layer_dims]
-
                 # Output layer
-                dl_dz[-1] = y_pred - y_true
-                dl_dw[-1] = np.outer(dl_dz[-1], self.Z[-2])
-                dl_db[-1] = dl_dz[-1]
+                self.dl_dz[-1] = y_pred - y_true
+                self.dl_dw[-1] = np.outer(self.dl_dz[-1], self.Z[-2])
+                self.dl_db[-1] = self.dl_dz[-1]
 
                 # Hidden layers
                 for i in range(-2, -len(self.layers), -1):
-                    dl_dz[i] = np.dot(self.W[i + 1].T, dl_dz[i + 1]) * relu_derivative(self.Z[i])
-                    dl_dw[i] = np.outer(dl_dz[i], self.Z[i - 1])
-                    dl_db[i] = dl_dz[i]
+                    self.dl_dz[i] = np.dot(self.W[i + 1].T, self.dl_dz[i + 1]) * relu_derivative(self.Z[i])
+                    self.dl_dw[i] = np.outer(self.dl_dz[i], self.Z[i - 1])
+                    self.dl_db[i] = self.dl_dz[i]
 
                 # Update weights and biases
                 for i in range(len(self.layers) - 2):
-                    self.W[i] -= learning_rate * dl_dw[i] / batch_size
-                    self.B[i] -= learning_rate * dl_db[i] / batch_size
+                    self.W[i] -= learning_rate * self.dl_dw[i] / batch_size
+                    self.B[i] -= learning_rate * self.dl_db[i] / batch_size
 
             print("Epoch:", epoch, "Loss:", epoch_loss)
             loss_history.append(epoch_loss)
 
         plot_loss(loss_history)
+        plot_loss_derivative(loss_history)
         print("Time:", time.time() - start)
 
     def predict(self, X):
@@ -119,6 +119,13 @@ def plot_loss(loss_history):
     plt.plot(loss_history)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
+    plt.show()
+
+
+def plot_loss_derivative(loss_history):
+    plt.plot(np.gradient(loss_history))
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss Derivative")
     plt.show()
 
 
