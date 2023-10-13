@@ -207,7 +207,7 @@ if frames % FPS == 0 and cells.sum() > 0:
 #### Comparison with TensorFlow
 | | Accuracy | Time (s) | $\alpha$ | Script |
 | :---: | :---: | :---: | :---: | :---: |
-| Scratch | 0.934 | 28.9791 | 0.01 | [nn_scratch.py](nn_scratch.py) |
-| TensorFlow | 0.94 | 6.2679 | Adam(0.001) | [nn_tf.py](nn_tf.py) |
+| Scratch | 0.934 | 28.9791 | 0.01 | [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py) |
+| TensorFlow | 0.94 | 6.2679 | Adam(0.001) | [nn_tf.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_tf.py) |
 
 Over 30 epochs on 5000 training examples and 1000 test examples.
