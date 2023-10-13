@@ -8,7 +8,7 @@ This project implements a multi-layer perceptron neural network from scratch in 
 3. [Forward propagation](#Forward-propagation)
 4. [Loss Function: Cross-entropy](#Loss-Function-Cross-entropy)
 5. [Learning and Optimization: Gradient Descent](#Learning-and-Optimization-Gradient-Descent)
-6. [Real-Time Digit Recognition]()
+6. [Real-Time Digit Recognition](#Real-Time-Digit-Recognition)
 7. [Comparison with TensorFlow](#Comparison-with-TensorFlow)
 
 ##### Screenshots
@@ -184,7 +184,7 @@ for i in range(len(layers) - 2):
 ```
 
 ## Real-Time Digit Recognition
-After saving the model weights and biases as [scratch_model.npz](scratch_model.npz), we can import [nn_scratch.py](nn_scratch.py) and use it's `predict()` function.
+After saving the model weights and biases as [scratch_model.npy](scratch_model.npy), we can import [nn_scratch.py](nn_scratch.py) and use it's `predict()` function.
 
 I build a basic 28x28 canvas using [pygame](https://en.wikipedia.org/wiki/Pygame) to predict whatever you draw as a 28x28 0 to 255 pixel values vector.
 
