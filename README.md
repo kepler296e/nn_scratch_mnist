@@ -4,9 +4,6 @@ This project implements a multi-layer perceptron neural network from scratch in 
 
 ## Table of Contents
 1. [Dataset](#Dataset)
-    - [MNIST dataset](#MNIST-dataset)
-    - [Training Example](#Training-Example)
-    - [Preprocessing](#Preprocessing)
 2. [Neural Network Architecture](#Neural-Network-Architecture)
 3. [Forward propagation](#Forward-propagation)
 4. [Loss Function: Cross-entropy](#Loss-Function-Cross-entropy)
@@ -32,17 +29,14 @@ $$b = b - \alpha \frac{\partial L}{\partial b}$$
 
 ## Dataset
 #### MNIST dataset
-The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70,000 28x28 images of handwritten digits (0-9). Each image is represented as a 784-vector of pixel values ranging from 0 to 255 (28x28=784).
-
-#### Training Example
-A training example consists of a 785-vector, where the first value represents the handwritten digit true label (0-9), and the remaining 784 values correspond to the pixel values of the 28x28 image ranging from 0 to 255.
+The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70,000 images of handwritten digits (0-9). Each image is represented as a 784-vector of pixel values (28x28=784) ranging from 0 to 255.
 
 #### Preprocessing
 The dataset is normalized as pixel_value / 255 (max value).
 
 ## Neural Network Architecture
 #### Input layer
-- 784 neurons, one for each pixel (28x28).
+- 784 neurons, one for each pixel.
 #### Hidden layers
 - Two hidden layers with 25 and 15 neurons respectively.
 - Both use [ReLU](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)) activation.
@@ -92,7 +86,6 @@ print("Accuracy:", np.mean(y_pred == y_test))
 ## Forward propagation
 The `predict(X)` function performs the forward propagation:
 
-#### Implementation in Python:
 ```python
 def predict(X):
     # Input layer
@@ -120,21 +113,21 @@ def predict(X):
             - Apply the activation function: `relu()`.
             - It's done!
 3. **Output Layer**:
-    - Similar to the hidden layers but without the activation function.
+    - Similar to the hidden layers but with linear activation.
     - Apply the softmax function to get the probabilities of each digit.
 
 ## Loss Function: Cross-entropy
 Being the generalization of the well-known [log-loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) function for binary classification, cross-entropy is a natural choice for multi-class classification problem.
 
 For each training example:
-- `y_pred` is the output of the NN, a 10-vector containing the probabilities of each digit.
+- `y_pred` is the output of the nn, a 10-vector containing the probabilities of each digit.
 - `y_true` is the true label one hot encoded.
 
 It works as follows:
 ```python
 y_pred = self.predict(X_train[i])
 y_true = np.zeros(self.layers[-1])
-y_true[y_train[i]] = 1
+y_true[y_train[i]] = 1 # One hot encoded true label
 
 loss = cross_entropy(y_true, y_pred)
 epoch_loss += loss
@@ -145,63 +138,33 @@ def cross_entropy(y_true, y_pred):
     return -np.sum(y_true * np.log(y_pred))
 ```
 
-#### Example
-```python
-true_label = 3
-y_true = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] # Input one hot encoded
-y_pred = [0, 0, 0, 0.7, 0, 0.1, 0, 0, 0.2, 0] # NN softmax output
-```
-So,
-```python
-np.log(y_pred) = [0, 0, 0, -0.35, 0, -2.3, 0, 0, -1.6, 0]
-y_true * np.log(y_pred) = [0, 0, 0, -0.35, 0, 0, 0, 0, 0, 0]
--np.sum(y_true * np.log(y_pred)) = 0.35
-```
-
-ln(y_pred) values will be always negative cos 0 < y_pred < 1
+`np.log(y_pred)` values will be always negative cos `0 < y_pred < 1`.
 
 <img src="screenshots/ln.png" width="50%" height="50%">
 
-so -np.sum() to positive loss.
+so `np.sum()` must be `*-1` to get a positive value.
 
-#### Loss over epochs
+#### Loss function over epochs
 <img src="screenshots/loss.png" width="50%" height="50%">
 
 ## Learning and Optimization: Gradient Descent
-Backpropagation is an algorithm used to train neural networks by iteratively adjusting the weights and biases in the direction that minimizes the loss function. The update rule for the weights and biases is as follows:
+Neural netorks learns by iteratively adjusting the weights and biases to minimize the loss function. This is done by calculating the partial derivatives of the loss function with respect to the weights and biases, and then updating the weights and biases in the opposite direction of the gradient.
 
-$$W_{ij} = W_{ij} - \alpha \frac{\partial L}{\partial W_{ij}}$$
+#### Gradient descent
+$$w = w - \alpha \frac{\partial L}{\partial w}$$
+$$b = b - \alpha \frac{\partial L}{\partial b}$$
 
-Where:
+Where $\alpha$ is the learning rate.
 
-- $W_{ij}$ represents the weight connecting neuron i in layer l to neuron j in layer l+1. This weight is stored in a weight matrix W.
-- `alpha` is the learning rate, which determines the step size of each weight update.
-- `dL / dW_ij` stands for the partial derivative of the loss function L with respect to the weight W_ij. It tells us how the loss function changes as we make adjustments to this weight.
+#### How much do the loss function changes when we change the weights and biases?
 
-We can calculate the partial derivative of the loss function with respect to the weights and biases using the chain rule:
+Using the chain rule:
+$$\frac{\partial L}{\partial w} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial w}$$
+$$\frac{\partial L}{\partial b} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial b}$$
 
-$$\frac{\partial Loss}{\partial W_i} = \frac{\partial Loss}{\partial Z_i} \frac{\partial Z_i}{\partial W_i}$$
+Where $z$ is the output of a neuron.
 
-$$\frac{\partial Loss}{\partial B_i} = \frac{\partial Loss}{\partial Z_i} \frac{\partial Z_i}{\partial B_i}$$
-
-$W$ is an array of weight matrices where $W[layer][neuron]$. For example, $W[0][784][25]$ denotes the weights from the 784 neurons in layer 0 to the 25 neurons in layer 1.
-$Z$ is an array of neuron activations where $Z[layer][neuron]$. For example, $Z[0][784]$ represents the activations in the input layer, and $Z[1][25]$ represents the activations in the first hidden layer.
-$B$ is an array of biases, where $B[layer][neuron]$. For example, $B[0][25]$ represents the biases for the 25 neurons in the first hidden layer.
-
-    W[layer][neuron] : (0, 784, 25), (1, 25, 15), (2, 15, 10)
-    Z[layer][neuron] : (0, 784), (1, 25), (2, 15), (3, 10)
-    B[layer][neuron] : (0, 25), (1, 15), (2, 10)
-
-#### Implementation
-Calculating the partial derivatives:
-
-$$\frac{\partial L}{\partial z_{j}} = y_{pred} - y_{true}$$
-
-The explanation here is quite complicated but if you are interested, [this is the sauce](https://towardsdatascience.com/derivative-of-the-softmax-function-and-the-categorical-cross-entropy-loss-ffceefc081d1).
-
-    >.<
-
-#### Backpropagation implementation in Python:
+#### Implementation in Python:
 ```python
 # Output layer
 dl_dz[-1] = y_pred - y_true
@@ -221,9 +184,9 @@ for i in range(len(layers) - 2):
 ```
 
 ## Real-Time Digit Recognition
-After saving the model weights and biases as `scratch_model.npz`, we can import nn_scratch.py and use the `predict()` function.
+After saving the model weights and biases as [scratch_model.npz](scratch_model.npz), we can import [nn_scratch.py](nn_scratch.py) and use it's `predict()` function.
 
-I build a basic 28x28 canvas using [pygame] and it makes prediction every second.
+I build a basic 28x28 canvas using [pygame](https://en.wikipedia.org/wiki/Pygame) to predict whatever you draw as a 28x28 0 to 255 pixel values vector.
 
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
@@ -231,20 +194,20 @@ if frames % FPS == 0 and cells.sum() > 0:
     y = model.predict(X)[0]
 ```    
 
+#### Controls:
 - `Left-click` to draw.
 - `Right-click` to erase.
 - `R` to reset the canvas.
 
+#### Screenshot:
 <img src="screenshots/3.png" width="50%" height="50%">
 
 [draw_scratch.py](draw_scratch.py)
 
-## Comparison with TensorFlow
-I implemented the same model using TensorFlow and the results are quite similar.
+#### Comparison with TensorFlow
+| | Accuracy | Time (s) | $\alpha$ | Script |
+| :---: | :---: | :---: | :---: | :---: |
+| Scratch | 0.934 | 28.9791 | 0.01 | [nn_scratch.py](nn_scratch.py) |
+| TensorFlow | 0.94 | 6.2679 | Adam(0.001) | [nn_tf.py](nn_tf.py) |
 
-| | Accuracy | Time (s) |
-| :---: | :---: | :---: |
-| Scratch | 0.934 | 28.9791 |
-| TensorFlow | 0.94 | 6.2679 |
-
-[nn_tf.py](nn_tf.py)
+Over 30 epochs on 5000 training examples and 1000 test examples.
