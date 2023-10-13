@@ -81,7 +81,7 @@ y_pred = model.predict(X_test)
 y_pred = np.argmax(y_pred, axis=1)
 print("Accuracy:", np.mean(y_pred == y_test))
 ```
-[nn_scratch.py]()
+[nn_scratch.py](nn_scratch.py)
 
 ## Forward propagation
 The `predict(X)` function performs the forward propagation:
