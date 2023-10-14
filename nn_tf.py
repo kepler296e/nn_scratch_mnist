@@ -45,7 +45,7 @@ def main():
     y_pred = np.argmax(y_pred, axis=1)
     print("Accuracy:", np.mean(y_pred == y_test))
 
-    model.save("model.keras")
+    model.save("models/model.keras")
 
 
 if __name__ == "__main__":

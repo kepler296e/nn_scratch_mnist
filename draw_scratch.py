@@ -13,7 +13,7 @@ frames = 0
 cell_size = 20
 cells = np.zeros((WIDTH // cell_size, HEIGHT // cell_size))
 
-model = nn_scratch.load_model("scratch_model")
+model = nn_scratch.load_model("models/scratch_model.npy")
 y = np.zeros(10)
 
 pygame.font.init()

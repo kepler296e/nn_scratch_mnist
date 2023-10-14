@@ -1,9 +1,8 @@
 # Neural Network from Scratch: Digit Recognition
-
 This project implements a multi-layer perceptron neural network from scratch in Python to classify handwritten digits from the [MNIST dataset](#MNIST-dataset). The goal is to gain a deeper understanding of the underlying concepts by building the model without using deep learning libraries.
 
 ## Table of Contents
-1. [Dataset](#Dataset)
+1. [MNIST dataset](#MNIST-dataset)
 2. [Neural Network Architecture](#Neural-Network-Architecture)
 3. [Forward propagation](#Forward-propagation)
 4. [Loss Function: Cross-entropy](#Loss-Function-Cross-entropy)
@@ -11,24 +10,23 @@ This project implements a multi-layer perceptron neural network from scratch in 
 6. [Real-Time Digit Recognition](#Real-Time-Digit-Recognition)
 7. [Comparison with TensorFlow](#Comparison-with-TensorFlow)
 
-##### Screenshots
-<img src="screenshots/0.png" width="20%" height="20%"> <img src="screenshots/1.png" width="20%" height="20%"> <img src="screenshots/2.png" width="20%" height="20%"> <img src="screenshots/3.png" width="20%" height="20%">
+#### Screenshots
+<img src="screenshots/0.png" width="15%" height="15%"> <img src="screenshots/1.png" width="15%" height="15%"> <img src="screenshots/2.png" width="15%" height="15%"> <img src="screenshots/3.png" width="15%" height="15%">
 
-<img src="screenshots/4.png" width="20%" height="20%"> <img src="screenshots/5.png" width="20%" height="20%"> <img src="screenshots/6.png" width="20%" height="20%"> <img src="screenshots/7.png" width="20%" height="20%">
+<img src="screenshots/4.png" width="15%" height="15%"> <img src="screenshots/5.png" width="15%" height="15%"> <img src="screenshots/6.png" width="15%" height="15%"> <img src="screenshots/7.png" width="15%" height="15%">
 
-<img src="screenshots/8.png" width="20%" height="20%"> <img src="screenshots/9.png" width="20%" height="20%"> <img src="screenshots/42.png" width="20%" height="20%">
+<img src="screenshots/8.png" width="15%" height="15%"> <img src="screenshots/9.png" width="15%" height="15%"> <img src="screenshots/42.png" width="15%" height="15%">
 
-##### Cross-entropy as loss function
+#### Cross-entropy loss function
 $$J(p,q) = -\sum_{x}p(x)log(q(x))$$
 [Why cross-entropy?](#Loss-Function-Cross-entropy)
 
-##### Gradient descent as optimization algorithm
+#### Gradient descent as optimization algorithm
 $$w = w - \alpha \frac{\partial L}{\partial w}$$
 $$b = b - \alpha \frac{\partial L}{\partial b}$$
 [Why gradient descent?](#Learning-and-Optimization-Gradient-Descent)
 
-## Dataset
-#### MNIST dataset
+## MNIST dataset
 The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70,000 images of handwritten digits (0-9). Each image is represented as a 784-vector of pixel values (28x28=784) ranging from 0 to 255.
 
 #### Preprocessing

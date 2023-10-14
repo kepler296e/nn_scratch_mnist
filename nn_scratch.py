@@ -31,7 +31,7 @@ def main():
     y_pred = np.argmax(y_pred, axis=1)
     print("Accuracy:", np.mean(y_pred == y_test))
 
-    save_model(model, "scratch_model")
+    save_model(model, "models/scratch_model.npy")
 
 
 class NN:
@@ -129,13 +129,13 @@ def plot_loss_derivative(loss_history):
     plt.show()
 
 
-def save_model(model, model_name):
+def save_model(model, filepath):
     model_data = {"layers": model.layers, "W": model.W, "B": model.B}
-    np.save(f"{model_name}.npy", model_data)
+    np.save(filepath, model_data)
 
 
-def load_model(model_name):
-    model_data = np.load(f"{model_name}.npy", allow_pickle=True).item()
+def load_model(filepath):
+    model_data = np.load(filepath, allow_pickle=True).item()
     model = NN(model_data["layers"])
     model.W = model_data["W"]
     model.B = model_data["B"]
