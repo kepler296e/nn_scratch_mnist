@@ -156,7 +156,7 @@ $$b = b - \alpha \frac{\partial L}{\partial b}$$
 
 Where $\alpha$ is the learning rate.
 
-#### How much do the loss function changes when we change the weights and biases?
+#### How much does the loss function change when we change the weights and biases?
 
 Using the chain rule:
 $$\frac{\partial L}{\partial w} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial w}$$
@@ -184,27 +184,26 @@ for i in range(len(layers) - 2):
 ```
 
 ## Real-Time Digit Recognition
-After saving the model weights and biases as [scratch_model.npy](scratch_model.npy), we can import [nn_scratch.py](nn_scratch.py) and use it's `predict()` function.
+After saving the parameters as `scratch_model.npy` using `save_model()`, we can import [nn_scratch.py](nn_scratch.py) and call the `predict()` function over whatever 784-vector we want.
 
-I build a basic 28x28 canvas using [pygame](https://en.wikipedia.org/wiki/Pygame) to predict whatever you draw as a 28x28 0 to 255 pixel values vector.
+I have built a pretty-basic canvas >.< using [pygame](https://en.wikipedia.org/wiki/Pygame) to make predictions every second.
 
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
     X = get_X() / 255
     y = model.predict(X)[0]
-```    
+```
+[draw_scratch.py](draw_scratch.py)
 
 #### Controls:
 - `Left-click` to draw.
 - `Right-click` to erase.
 - `R` to reset the canvas.
 
-#### Screenshot:
+#### Example:
 <img src="screenshots/3.png" width="50%" height="50%">
 
-[draw_scratch.py](draw_scratch.py)
-
-#### Comparison with TensorFlow
+## Comparison with TensorFlow
 | | Accuracy | Time (s) | $\alpha$ | Script |
 | :---: | :---: | :---: | :---: | :---: |
 | Scratch | 0.934 | 28.9791 | 0.01 | [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py) |
