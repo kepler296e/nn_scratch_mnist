@@ -1,5 +1,12 @@
 # Neural Network from Scratch: Digit Recognition
-This project implements a multi-layer perceptron neural network from scratch in Python to classify handwritten digits from the [MNIST dataset](#MNIST-dataset). The goal is to gain a deeper understanding of the underlying concepts by building the model without using deep learning libraries.
+In this project, I have implemented a multi-layer perceptron neural network from scratch in Python to classify handwritten digits from the [MNIST dataset](#MNIST-dataset). My goal was to gain a deeper understanding of the underlying concepts by building the model without using deep learning libraries.
+
+#### Screenshots
+<img src="screenshots/0.png" width="15%" height="15%"> <img src="screenshots/1.png" width="15%" height="15%"> <img src="screenshots/2.png" width="15%" height="15%"> <img src="screenshots/3.png" width="15%" height="15%">
+
+<img src="screenshots/4.png" width="15%" height="15%"> <img src="screenshots/5.png" width="15%" height="15%"> <img src="screenshots/6.png" width="15%" height="15%"> <img src="screenshots/7.png" width="15%" height="15%">
+
+<img src="screenshots/8.png" width="15%" height="15%"> <img src="screenshots/9.png" width="15%" height="15%"> <img src="screenshots/42.png" width="15%" height="15%">
 
 ## Table of Contents
 1. [MNIST dataset](#MNIST-dataset)
@@ -9,13 +16,6 @@ This project implements a multi-layer perceptron neural network from scratch in 
 5. [Learning and Optimization: Gradient Descent](#Learning-and-Optimization-Gradient-Descent)
 6. [Real-Time Digit Recognition](#Real-Time-Digit-Recognition)
 7. [Comparison with TensorFlow](#Comparison-with-TensorFlow)
-
-#### Screenshots
-<img src="screenshots/0.png" width="15%" height="15%"> <img src="screenshots/1.png" width="15%" height="15%"> <img src="screenshots/2.png" width="15%" height="15%"> <img src="screenshots/3.png" width="15%" height="15%">
-
-<img src="screenshots/4.png" width="15%" height="15%"> <img src="screenshots/5.png" width="15%" height="15%"> <img src="screenshots/6.png" width="15%" height="15%"> <img src="screenshots/7.png" width="15%" height="15%">
-
-<img src="screenshots/8.png" width="15%" height="15%"> <img src="screenshots/9.png" width="15%" height="15%"> <img src="screenshots/42.png" width="15%" height="15%">
 
 #### Cross-entropy loss function
 $$J(p,q) = -\sum_{x}p(x)log(q(x))$$
