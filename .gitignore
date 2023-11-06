@@ -1,5 +1,4 @@
-mnist_test.csv
-mnist_train.csv
+mnist.csv
 __pycache__/
 .vscode/
 nn_scratch.cpp
