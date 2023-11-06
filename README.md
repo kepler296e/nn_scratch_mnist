@@ -208,10 +208,9 @@ if frames % FPS == 0 and cells.sum() > 0:
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | Scratch | 5K | 30 | 1 | 0.934 | 28.9791 | 0.01  |
 | Scratch NEW | 5K | 10 | 4 | 0.892 | 4.7192 | 0.01 |
-| TensorFlow | 5K | 30 | | 0.94 | 6.2679 | Adam(0.001) |
+| TensorFlow | 5K | 10 | 4 | 0.936 | 11.0347 | Adam(0.001) |
+| TensorFlow | 5K | 10 | 32 | 0.924 | 2.5503 | Adam(0.001) |
 
 [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
 
 [nn_tf.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_tf.py)
-
-Over 30 epochs on 5000 training examples and 1000 test examples.
