@@ -3,8 +3,8 @@ import numpy as np
 import nn_scratch
 
 WIDTH, HEIGHT = 560, 560
-PREDICTION_WIDTH = 300
-SCREEN = pygame.display.set_mode((WIDTH + PREDICTION_WIDTH, HEIGHT))
+PROBS_WIDTH = 300
+SCREEN = pygame.display.set_mode((WIDTH + PROBS_WIDTH, HEIGHT))
 
 FPS = 60
 clock = pygame.time.Clock()
@@ -14,7 +14,7 @@ cell_size = 20
 cells = np.zeros((WIDTH // cell_size, HEIGHT // cell_size))
 
 model = nn_scratch.load_model("models/scratch_model.npy")
-y = np.zeros(10)
+y_pred = np.zeros(10)
 
 pygame.font.init()
 font = pygame.font.SysFont("Arial", 30)
@@ -30,7 +30,7 @@ def get_X():
 
 
 def main():
-    global cells, prediction, frames, y
+    global cells, frames, y_pred
 
     while True:
         for event in pygame.event.get():
@@ -50,7 +50,7 @@ def main():
 
         if frames % FPS == 0 and cells.sum() > 0:
             X = get_X() / 255
-            y = model.predict(X)[0]
+            y_pred = model.predict(X)[0]
 
         SCREEN.fill((0, 0, 0))
         draw()
@@ -94,7 +94,7 @@ def draw():
         bar_gap = 10
 
         # Red bars
-        bar_width = y[digit] * PREDICTION_WIDTH
+        bar_width = y_pred[digit] * PROBS_WIDTH
         bar_x = WIDTH + 20
         bar_y = digit * (bar_height + bar_gap) + 10
         pygame.draw.rect(SCREEN, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))

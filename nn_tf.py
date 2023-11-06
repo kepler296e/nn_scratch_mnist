@@ -2,27 +2,30 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from keras.models import Sequential
-from keras.layers import Dense
 import time
 
 
 def main():
-    # Training data
-    train = pd.read_csv("mnist_train.csv", header=None)[:5000]
-    X_train, y_train = train.iloc[:, 1:].values / 255, train.iloc[:, 0].values
+    # load data
+    data = pd.read_csv("mnist_train.csv", header=None, nrows=5000).to_numpy()
 
-    # Test data
-    test = pd.read_csv("mnist_test.csv", header=None)[:500]
-    X_test, y_test = test.iloc[:, 1:].values / 255, test.iloc[:, 0].values
+    X = data[:, 1:] / 255  # normalize
+    y = data[:, 0]
 
-    # Build model
-    model = Sequential(
+    # split data
+    train = int(len(X) * 0.8)
+    val = int(len(X) * 0.1)
+    X_train, y_train = X[:train], y[:train]
+    X_val, y_val = X[train : train + val], y[train : train + val]
+    X_test, y_test = X[train + val :], y[train + val :]
+
+    # build model
+    model = tf.keras.models.Sequential(
         [
-            tf.keras.Input(shape=(784,)),
-            Dense(units=25, activation="relu"),
-            Dense(units=15, activation="relu"),
-            Dense(units=10),
+            tf.keras.Input((X.shape[1],)),
+            tf.keras.layers.Dense(25, activation="relu"),
+            tf.keras.layers.Dense(15, activation="relu"),
+            tf.keras.layers.Dense(10),
         ]
     )
 
@@ -31,7 +34,7 @@ def main():
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     )
 
-    # Train model
+    # train
     start = time.time()
     model.fit(
         X_train,
@@ -40,10 +43,10 @@ def main():
     )
     print("Time:", time.time() - start)
 
-    # Test model
-    y_pred = tf.nn.softmax(model.predict(X_test))
+    # evaluate
+    y_pred = tf.nn.softmax(model.predict(X_val))
     y_pred = np.argmax(y_pred, axis=1)
-    print("Accuracy:", np.mean(y_pred == y_test))
+    print("Accuracy:", np.mean(y_pred == y_val))
 
     model.save("models/model.keras")
 
