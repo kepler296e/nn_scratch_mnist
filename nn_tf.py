@@ -7,7 +7,7 @@ import time
 
 def main():
     # load data
-    data = pd.read_csv("mnist_train.csv", header=None, nrows=5000).to_numpy()
+    data = pd.read_csv("mnist.csv", header=None, nrows=5000).to_numpy()
 
     X = data[:, 1:] / 255  # normalize
     y = data[:, 0]
@@ -22,7 +22,7 @@ def main():
     # build model
     model = tf.keras.models.Sequential(
         [
-            tf.keras.Input((X.shape[1],)),
+            tf.keras.Input((784,)),
             tf.keras.layers.Dense(25, activation="relu"),
             tf.keras.layers.Dense(15, activation="relu"),
             tf.keras.layers.Dense(10),
@@ -39,7 +39,8 @@ def main():
     model.fit(
         X_train,
         y_train,
-        epochs=30,
+        epochs=10,
+        batch_size=4,
     )
     print("Time:", time.time() - start)
 
@@ -48,7 +49,7 @@ def main():
     y_pred = np.argmax(y_pred, axis=1)
     print("Accuracy:", np.mean(y_pred == y_val))
 
-    model.save("models/model.keras")
+    # model.save("models/model.keras")
 
 
 if __name__ == "__main__":
