@@ -5,173 +5,179 @@ import time
 
 
 def main():
-    # load data
-    data = pd.read_csv("mnist.csv", header=None, nrows=5000).to_numpy()
+    # Load data
+    data = pd.read_csv("mnist.csv", header=None, nrows=10000).to_numpy()
 
-    X = data[:, 1:] / 255  # normalize
+    # The first column is the label and the rest are 28x28=784 pixels
+    X = data[:, 1:] / 255  # / max to normalize
     y = data[:, 0]
 
-    # split data
+    # Split data into train, validation, and test (80%, 10%, 10%)
     train = int(len(X) * 0.8)
     val = int(len(X) * 0.1)
     X_train, y_train = X[:train], y[:train]
     X_val, y_val = X[train : train + val], y[train : train + val]
     X_test, y_test = X[train + val :], y[train + val :]
 
-    np.random.seed(42)  # make it reproducible
+    np.random.seed(42)  # for reproducibility
 
-    # build model
-    model = NN(
-        layers=[784, 25, 15, 10],
-        batch_size=4,
-    )
+    # Build model
+    layers = [784, 50, 25, 10]
+    model = NN(layers)
 
-    print("Parameters:", model.count_params())  # 20175
+    print("Parameters:", model.count_params())
 
-    # train
+    # Train
     model.fit(
         X_train,
         y_train,
         epochs=10,
         learning_rate=0.01,
+        batch_size=64,
     )
 
-    # evaluate
-
-    # we may remove some rows to fit X-y_val on batches
-    # e.g. batch_size = 32 and len(X_val) = 500 => 500 // 32 = 15 => 15 * 32 = 480
-    X_val, y_val = reshape_to_fit_batch_size(X_val, y_val, model.batch_size)
-    accuracy = 0
-    for i in range(len(X_val)):  # for each 32 examples
-        y_pred = model.predict(X_val[i])
-        y_pred = np.argmax(y_pred, axis=1)
-        accuracy += np.sum(y_pred == y_val[i]) / model.batch_size
-    print("Accuracy:", accuracy / len(X_val))
+    # Evaluate
+    evaluate(model, X_train, y_train, "Train")
+    evaluate(model, X_val, y_val, "Validation")
 
     # save_model(model, "models/scratch_model.npy")
 
 
 class NN:
-    def __init__(self, layers, batch_size):
+    def __init__(self, layers):
         self.layers = layers
-        self.batch_size = batch_size
         self.layer_dims = [(layers[i], layers[i + 1]) for i in range(len(layers) - 1)]
-        self.W = [np.random.randn(batch_size, a, b) * np.sqrt(2 / a) for a, b in self.layer_dims]  # (32, 784, 25), (32, 25, 15), (32, 15, 10)
-        self.B = [np.zeros((batch_size, b)) for _, b in self.layer_dims]
-        self.Z = [np.zeros((batch_size, c)) for c in layers]
-        self.dl_dz = self.Z.copy()
-        self.dl_dw = self.W.copy()
-        self.dl_db = self.B.copy()
+        self.W = [np.random.randn(a, b) * np.sqrt(2 / a) for a, b in self.layer_dims]
+        self.B = [np.zeros(b) for _, b in self.layer_dims]
+        self.dl_dw = [np.zeros_like(w) for w in self.W]
+        self.dl_db = [np.zeros_like(b) for b in self.B]
 
-    def fit(self, X_train: np.ndarray, y_train: np.ndarray, epochs, learning_rate):
-        X_train, y_train = reshape_to_fit_batch_size(X_train, y_train, self.batch_size)
-
+    def fit(self, X_train: np.ndarray, y_train: np.ndarray, epochs, learning_rate, batch_size):
         start_time = time.time()
         loss_history = []
+
         for epoch in range(epochs):
             epoch_loss = 0
-            for i in range(len(X_train)):
-                # forward pass
-                y_pred = self.forward_propagation(X_train[i])  # (32, 10)
 
-                y_true = np.zeros((self.batch_size, self.layers[-1]))  # (32, 10)
-                y_true[np.arange(self.batch_size), y_train[i]] = 1  # (32, 10) one hot encode
-                batch_loss = cross_entropy(y_true, y_pred).mean()  # (32,).mean() => scalar
+            remainder = len(X_train) % batch_size
+            if remainder != 0:
+                # truncate remainder to fit data on batches
+                X_train, y_train = X_train[:-remainder], y_train[:-remainder]
 
-                epoch_loss += batch_loss
+            for i in range(0, len(X_train) - remainder, batch_size):
+                X_batch = X_train[i : i + batch_size]  # (64, 784)
+                y_batch = y_train[i : i + batch_size]  # (64,)
 
-                # backprop
-                self.dl_dw, self.dl_db = self.backward_propagation(y_true, y_pred)
+                # Forward pass
+                Z, y_pred = self.predict(X_batch)
+                # Z = [(64, 784), (64, 25), (64, 15), (64, 10)]
+                # y_pred = (64, 10) probs for each batch X
 
-                # update
-                self.update_parameters(learning_rate)
+                # Loss
+                y_true = np.zeros((batch_size, self.layers[-1]))  # (64, 10)
+                y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
+                epoch_loss += cross_entropy(y_true, y_pred) / batch_size
+
+                # Backprop
+                self.dl_dw, self.dl_db = self.backprop(Z, y_true, y_pred)
+
+                # Update params
+                self.update_params(learning_rate)
 
             print("Epoch:", epoch, "Loss:", epoch_loss)
             loss_history.append(epoch_loss)
 
-        # plot_loss(loss_history)
-        # plot_loss_derivative(loss_history)
+        plot_loss(loss_history)
+        plot_loss_derivative(loss_history)
         print("Time:", time.time() - start_time)
 
-    def forward_propagation(self, X):
-        # input layer
-        self.Z[0] = X  # (32, 784)
+    def predict(self, X):
+        batch_size = X.shape[0]
+        Z = [np.zeros((batch_size, c)) for c in self.layers]
 
-        # hidden layers
-        for i in range(len(self.layers) - 1):  # 2
-            self.Z[i + 1] = relu(np.einsum("bi,bij->bj", self.Z[i], self.W[i]) + self.B[i])  # einsum does @ over the whole batch
-            # i = 0 => (32, 25) = relu((32, 784) @ (32, 784, 25) + (32, 25))
-            # i = 1 => (32, 15) = relu((32, 25) @ (32, 25, 15) + (32, 15))
-
-        # ouput layer with linear activation
-        self.Z[-1] = np.einsum("bi,bij->bj", self.Z[-2], self.W[-1]) + self.B[-1]
-        # (32, 10) = (32, 15) @ (32, 15, 10) + (32, 10)
-        y_pred = softmax(self.Z[-1])
-
-        return y_pred
-
-    def backward_propagation(self, y_true, y_pred):
-        # y_true and y_pred shapes are (32, 10)
-
-        # Output layer
-        self.dl_dz[-1] = y_pred - y_true  # (32, 10)
-        self.dl_dw[-1] = np.einsum("bi,bj->bji", self.dl_dz[-1], self.Z[-2])  # (32, 10) @ (32, 15) => (32, 15, 10)
-        self.dl_db[-1] = self.dl_dz[-1]  # (32, 10) = (32, 10)
+        # Input layer
+        Z[0] = X
 
         # Hidden layers
-        for i in range(-2, -len(self.layers), -1):  # goes through -2, -3
-            self.dl_dz[i] = np.einsum("bi,bji->bj", self.dl_dz[i + 1], self.W[i + 1]) * relu_derivative(self.Z[i])
-            self.dl_dw[i] = np.einsum("bi,bj->bji", self.dl_dz[i], self.Z[i - 1])
-            self.dl_db[i] = self.dl_dz[i]
-            # i = -2 =>
-            # (32, 15) = ((32, 10) @ (32, 15, 10)) * (32, 15)
-            # (32, 15) @ (32, 25) => (32, 25, 15)
-            # (32, 15) = (32, 15)
+        for i in range(len(self.layers) - 2):  # 0, 1
+            Z[i + 1] = relu(Z[i] @ self.W[i] + self.B[i])
+
+        # Output layer
+        Z[3] = Z[2] @ self.W[2] + self.B[2]
+
+        return Z, softmax(Z[3])
+
+    def backprop(self, Z, y_true, y_pred):
+        dZ = [np.zeros_like(z) for z in Z]
+
+        # Remember that:
+        # layers = [784, 50, 25, 10]
+        # batch_size = 64, so:
+        # Z (activations) = [(64, 784), (64, 50), (64, 25), (64, 10)]
+        # Weights = [(784, 50), (50, 25), (25, 10)]
+        # Biases = [(50,), (25,), (10,)]
+
+        # dZ is the partial derivative of the loss function with respect to the activations
+
+        # Output layer
+        dZ[-1] = y_pred - y_true  # (64, 10)
+        self.dl_dw[-1] = np.einsum("bi,bj->ji", dZ[-1], Z[-2])  # (64, 10) @ (64, 25) => (25, 10)
+        self.dl_db[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
+
+        """
+        dZ-1 = loss/softmax * softmax/Z-1
+        dW-1 = dZ-1 * Z-2
+        dB-1 = dZ-1
+
+        dZ-2 = dZ-1 * W-1 * dRelu(Z-2)
+        dW-2 = dZ-2 * Z-3
+        dB-2 = dZ-2
+        """
+
+        # Hidden layers
+        for i in range(-2, -len(self.layers), -1):  # -2, -3
+            dZ[i] = np.einsum("ij,bj->bi", self.W[i + 1], dZ[i + 1]) * relu_derivative(Z[i])
+            self.dl_dw[i] = np.einsum("bi,bj->ji", dZ[i], Z[i - 1])
+            self.dl_db[i] = np.sum(dZ[i], axis=0)
+
+        # When i = -2:
+        # (25, 10) @ (64, 10) => (64, 25)
+        # (64, 25) @ (64, 50) => (50, 25)
+        # (64, 25) => (25,)
 
         return self.dl_dw, self.dl_db
 
-    def update_parameters(self, learning_rate):
-        # print(self.W.shape, self.dl_dw.shape)
+    def update_params(self, learning_rate):
         for i in range(len(self.layers) - 1):  # 0, 1, 2
             self.W[i] -= learning_rate * self.dl_dw[i]
             self.B[i] -= learning_rate * self.dl_db[i]
-        # asd = input()
-
-    def predict(self, X):
-        return self.forward_propagation(X)
 
     def count_params(self):
-        # w.shape[1:] to ignore batch_size
-        return sum([np.prod(w.shape[1:]) for w in self.W]) + sum([np.prod(b.shape[1:]) for b in self.B])
-
-
-def reshape_to_fit_batch_size(X, y, batch_size):
-    X = X[: (len(X) // batch_size) * batch_size]
-    y = y[: (len(y) // batch_size) * batch_size]
-    X = X.reshape(-1, batch_size, X.shape[1])  # (480, 784) => (15, 32, 784)
-    y = y.reshape(-1, batch_size)
-    return X, y
-
-
-def cross_entropy(y_true, y_pred):
-    # y_true and y_pred shapes are (32, 10)
-    # the sum must be done over each row
-    return -np.sum(y_true * np.log(y_pred + 1e-8), axis=1)  # 1e-8 to avoid log(0)
-
-
-def softmax(logits):
-    exp_logits = np.exp(logits)  # (32, 10)
-    return exp_logits / np.sum(exp_logits, axis=1, keepdims=True)  # (32, 10) / (32, 1)
+        return sum(np.prod(w.shape) for w in self.W) + sum(np.prod(b.shape) for b in self.B)
 
 
 def relu(X):
-    # X shape (32, n)
     return np.where(X > 0, X, 0)
 
 
 def relu_derivative(X):
-    # X shape (32, n)
     return np.where(X > 0, 1, 0)
+
+
+def cross_entropy(y_true, y_pred):
+    return -np.sum(y_true * np.log(y_pred + 1e-8))  # 1e-8 to avoid ln(0)
+
+
+def softmax(logits):
+    exp_logits = np.exp(logits)  # (64, 10)
+    return exp_logits / np.sum(exp_logits, axis=1, keepdims=True)  # (64, 10) / (64, 1)
+
+
+def evaluate(model: NN, X: np.ndarray, y: np.ndarray, data):
+    _, y_pred = model.predict(X)
+    y_pred = np.argmax(y_pred, axis=1)  # (64, 10) => (64,)
+    accuracy = np.sum(y_pred == y) / len(y)
+    print(data, "Accuracy:", accuracy)
 
 
 def plot_loss(loss_history):
@@ -195,7 +201,7 @@ def save_model(model, filepath):
 
 def load_model(filepath):
     model_data = np.load(filepath, allow_pickle=True).item()
-    model = NN(model_data["layers"], 1)
+    model = NN(model_data["layers"])
     model.W = model_data["W"]
     model.B = model_data["B"]
     return model

@@ -1,5 +1,8 @@
 # Neural Network from Scratch: Digit Recognition
-In this project, I have implemented a multi-layer perceptron neural network from scratch in Python to classify handwritten digits from the [MNIST dataset](#mnist-dataset). My goal was to gain a deeper understanding of the underlying concepts by building the model without using deep learning libraries.
+A fast and cool MLP from scratch in Python that classifies handwritten digits from the [MNIST dataset](#mnist-dataset).
+
+#### UPDATE 7/11/23:
+Added parallelization with batches => now trains **x17** faster! :D
 
 #### Screenshots
 <img src="screenshots/0.png" width="15%" height="15%"> <img src="screenshots/1.png" width="15%" height="15%"> <img src="screenshots/2.png" width="15%" height="15%"> <img src="screenshots/3.png" width="15%" height="15%">
@@ -27,20 +30,30 @@ $$b = b - \alpha \frac{\partial L}{\partial b}$$
 [Why gradient descent?](#learning-and-optimization-gradient-descent)
 
 ## MNIST dataset
-The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70,000 images of handwritten digits (0-9). Each image is represented as a 784-vector of pixel values (28x28=784) ranging from 0 to 255.
+The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70,000 images of handwritten digits (0-9) represented as a 784-vector of pixel values (28x28=784) ranging from 0 to 255.
 
 #### Preprocessing
-The dataset is normalized as pixel_value / 255 (max value).
+The data is normalized as pixel_value / 255.
+
+#### Split
+- 80% for training
+- 10% for validation
+- 10% for testing
 
 ## Neural Network Architecture
 #### Input layer
 - 784 neurons, one for each pixel.
 #### Hidden layers
-- Two hidden layers with 25 and 15 neurons respectively.
+- Two hidden layers with 50 and 25 neurons respectively.
 - Both use [ReLU](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)) activation.
 #### Output layer
-- 10 neurons, one for each digit.
-- [Softmax](https://en.wikipedia.org/wiki/Softmax_function) activation transforms the nn's output into a probability distribution.
+- 10 neurons with linear activation (one for each digit).
+- And finally [softmax](https://en.wikipedia.org/wiki/Softmax_function) to get the probabilities of each digit.
+
+#### Parameters
+- 784 * 50 + 50 * 25 + 25 * 10 = 40700 weights.
+- 50 + 25 + 10 = 85 biases.
+- Total: 40785 parameters.
 
 ReLU and Softmax implementation in Python:
 ```python
@@ -53,102 +66,102 @@ def softmax(logits):
 ```
 
 #### Hiperparameters
-- Epochs: 20.
-- Learning Rate: Fixed at 0.01. While more advanced algos like [Adam](https://optimization.cbe.cornell.edu/index.php?title=Adam) could be considered, a learning rate of 0.01 achieves an accuracy of approximately 98%, which is sufficient for practical purposes.
-- Weight Initialization: [He initialization](https://machinelearningmastery.com/weight-initialization-for-deep-learning-neural-networks/) for weights, and biases are initialized to 0.
+- Epochs: 20
+- Batch Size: 64
+- Learning Rate: Fixed at 0.01. While more advanced algorithms like [Adam](https://optimization.cbe.cornell.edu/index.php?title=Adam) could be considered, a learning rate of 0.01 achieves an accuracy of approximately 98%, which is enough for practical purposes.
+- Weight Initialization: [He initialization](https://machinelearningmastery.com/weight-initialization-for-deep-learning-neural-networks/) for weights.
 
-#### After 20 epochs, the loss functions doesn't change much...
+#### After 20 epochs, the loss functions doesn't change much:
 <img src="screenshots/dloss.png" width="50%" height="50%">
 
 #### Model implementation in Python:
 ```python
-layers=[784, 25, 15, 10]
+layers = [784, 50, 25, 10]
 model = NN(layers)
 
-print("Parameters:", model.count_params())  # 20175
-
-# train
+# Train
 model.fit(
     X_train,
     y_train,
     epochs=10,
     learning_rate=0.01,
-    batch_size=4
+    batch_size=64,
 )
 
-# evaluate
-y_pred = model.predict(X_val)
-y_pred = np.argmax(y_pred, axis=1)
-print("Accuracy:", np.mean(y_pred == y_val))
+# Evaluate
+evaluate(model, X_train, y_train, "Train")
+evaluate(model, X_val, y_val, "Validation")
 ```
 [nn_scratch.py](nn_scratch.py)
 
 ## Forward propagation
-The `predict(X)` function performs the forward propagation:
+The `predict(X)` function performs the forward propagation as follows:
 
 ```python
-def forward_propagation(self, X):
-    # input layer
-    self.Z[0] = X
+def predict(self, X):
+    batch_size = X.shape[0]
+    Z = [np.zeros((batch_size, c)) for c in self.layers]
 
-    # hidden layers
-    for i in range(len(self.layers) - 1):  # 0, 1, 2
-        self.Z[i + 1] = relu(np.einsum("bi,bij->bj", self.Z[i], self.W[i]) + self.B[i])  # einsum does @ over the whole batch
+    # Input layer
+    Z[0] = X
 
-    # ouput layer with linear activation
-    self.Z[-1] = np.einsum("bi,bij->bj", self.Z[-2], self.W[-1]) + self.B[-1]
-    y_pred = softmax(self.Z[-1])
+    # Hidden layers
+    for i in range(len(self.layers) - 2):  # 0, 1
+        Z[i + 1] = relu(Z[i] @ self.W[i] + self.B[i])
 
-    return y_pred
+    # Output layer
+    Z[3] = Z[2] @ self.W[2] + self.B[2]
+
+    return Z, softmax(Z[3])
 ```
 
 #### Explanation
 1. **Input Layer**:
-    - Set the input layer as `X`.
+    - Set the input layer activations as `X`.
 2. **Hidden Layers**:
     - For each hidden layer:
         - For each hidden neuron:
-            - This neuron relys on all previous layer neurons * its mutual weights: n1w1 + n2w2 + ... + nNwN, and thats literally the definition of dot product: `np.dot(Z[i], W[i].T)`.
-            - Add the bias: `+ B[i]`.
-            - Apply the activation function: `relu()`.
+            - This neuron relies on all previous layer neurons * its mutual weights: n1w1 + n2w2 + ... + nNwN, and thats literally the definition of dot product: `Z[i] @ W[i]`
+            - Add the bias: `+ B[i]`
+            - Use `relu()` as the activation function.
             - It's done!
 3. **Output Layer**:
     - Similar to the hidden layers but with linear activation.
-    - Apply the softmax function to get the probabilities of each digit.
+    - Apply `softmax()` to get the probabilities of each digit.
 
 ## Loss Function: Cross-entropy
 Being the generalization of the well-known [log-loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) function for binary classification, cross-entropy is a natural choice for multi-class classification problem.
 
 For each training example:
-- `y_pred` is the output of the nn, a 10-vector containing the probabilities of each digit.
+- `y_pred` is the ouput of the nn, a 10-vector containing the probabilities of each digit.
 - `y_true` is the true label one hot encoded.
 
 It works as follows:
 ```python
-y_pred = self.forward_propagation(X_train[i])
-y_true = np.zeros((self.batch_size, self.layers[-1]))
-y_true[np.arange(self.batch_size), y_train[i]] = 1  # one hot encode
-batch_loss = cross_entropy(y_true, y_pred).mean()  # (batch_size,).mean() => scalar
-
-epoch_loss += batch_loss
+# Loss, with batch_size=64 and layers[-1]=10
+y_true = np.zeros((batch_size, self.layers[-1]))  # (64, 10)
+y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
+epoch_loss += cross_entropy(y_true, y_pred) / batch_size
 ```
+One hot encoded means that for example if the label is $4$, then `y_true` will be `[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]`.
+
 Where `cross_entropy` is defined as:
 ```python
 def cross_entropy(y_true, y_pred):
-    return -np.sum(y_true * np.log(y_pred + 1e-8), axis=1)  # 1e-8 to avoid log(0)
+    return -np.sum(y_true * np.log(y_pred + 1e-8))  # 1e-8 to avoid ln(0)
 ```
 
-`np.log(y_pred)` values will be always negative cos `0 < y_pred < 1`.
+`np.log(y_pred)` will always return negative values because `y_pred` will always be between `0` and `1`, and `ln(x)` is negative for `0 < x < 1`.
 
 <img src="screenshots/ln.png" width="50%" height="50%">
 
-so `np.sum()` must be `*-1` to get a positive value.
+So `np.sum()` must be multiply by `-1` to get the loss as positive.
 
 #### Loss function over epochs
 <img src="screenshots/loss.png" width="50%" height="50%">
 
 ## Learning and Optimization: Gradient Descent
-Neural netorks learns by iteratively adjusting the weights and biases to minimize the loss function. This is done by calculating the partial derivatives of the loss function with respect to the weights and biases, and then updating the weights and biases in the opposite direction of the gradient.
+Neural netorks learns by iteratively adjusting it's weights and biases to minimize the loss function. This is done by calculating the partial derivatives of the loss function with respect to the weights and biases, and then updating the weights and biases in the opposite direction of the gradient.
 
 #### Gradient descent
 $$w = w - \alpha \frac{\partial L}{\partial w}$$
@@ -166,27 +179,51 @@ Where $z$ is the output of a neuron.
 
 #### Implementation in Python:
 ```python
-# Output layer
-dl_dz[-1] = y_pred - y_true
-dl_dw[-1] = np.einsum("bi,bj->bji", self.dl_dz[-1], self.Z[-2])
-dl_db[-1] = dl_dz[-1]
+def backprop(self, Z, y_true, y_pred):
+    dZ = [np.zeros_like(z) for z in Z]
 
-# Hidden layers
-for i in range(-2, -len(layers), -1):
-    self.dl_dz[i] = np.einsum("bi,bji->bj", self.dl_dz[i + 1], self.W[i + 1]) * relu_derivative(self.Z[i])
-    self.dl_dw[i] = np.einsum("bi,bj->bji", self.dl_dz[i], self.Z[i - 1])
-    self.dl_db[i] = self.dl_dz[i]
+    # Remember that:
+    # layers = [784, 50, 25, 10]
+    # batch_size = 64, so:
+    # Z (activations) = [(64, 784), (64, 50), (64, 25), (64, 10)]
+    # Weights = [(784, 50), (50, 25), (25, 10)]
+    # Biases = [(50,), (25,), (10,)]
 
-# Update weights and biases
-for i in range(len(self.layers) - 1):  # 0, 1, 2
-    self.W[i] -= learning_rate * self.dl_dw[i]
-    self.B[i] -= learning_rate * self.dl_db[i]
+    # dZ is the partial derivative of the loss function with respect to the activations
+
+    # Output layer
+    dZ[-1] = y_pred - y_true  # (64, 10)
+    self.dl_dw[-1] = np.einsum("bi,bj->ji", dZ[-1], Z[-2])  # (64, 10) @ (64, 25) => (25, 10)
+    self.dl_db[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
+
+    """
+    dZ-1 = loss/softmax * softmax/Z-1
+    dW-1 = dZ-1 * Z-2
+    dB-1 = dZ-1
+
+    dZ-2 = dZ-1 * W-1 * dRelu(Z-2)
+    dW-2 = dZ-2 * Z-3
+    dB-2 = dZ-2
+    """
+
+    # Hidden layers
+    for i in range(-2, -len(self.layers), -1):  # -2, -3
+        dZ[i] = np.einsum("ij,bj->bi", self.W[i + 1], dZ[i + 1]) * relu_derivative(Z[i])
+        self.dl_dw[i] = np.einsum("bi,bj->ji", dZ[i], Z[i - 1])
+        self.dl_db[i] = np.sum(dZ[i], axis=0)
+
+    # When i = -2:
+    # (25, 10) @ (64, 10) => (64, 25)
+    # (64, 25) @ (64, 50) => (50, 25)
+    # (64, 25) => (25,)
+
+    return self.dl_dw, self.dl_db
 ```
 
 ## Real-Time Digit Recognition
 After saving the parameters as `scratch_model.npy` using `save_model()`, we can import [nn_scratch.py](nn_scratch.py) and call the `predict()` function over whatever 784-vector we want.
 
-I have built a pretty-basic canvas >.< using [pygame](https://en.wikipedia.org/wiki/Pygame) to make predictions every second.
+I have built a pretty-basic 28x28 canvas >.< using [PyGame](https://en.wikipedia.org/wiki/Pygame) to draw and see the predictions that our scratch model does in real-time.
 
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
@@ -204,12 +241,10 @@ if frames % FPS == 0 and cells.sum() > 0:
 <img src="screenshots/3.png" width="50%" height="50%">
 
 ## Scratch vs. TensorFlow
-| | nrows | Epochs | Batch | Accuracy | Time (s) | $\alpha$ |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Scratch | 5K | 30 | 1 | 0.934 | 28.9791 | 0.01  |
-| Scratch NEW | 5K | 10 | 4 | 0.892 | 4.7192 | 0.01 |
-| TensorFlow | 5K | 10 | 4 | 0.936 | 11.0347 | Adam(0.001) |
-| TensorFlow | 5K | 10 | 32 | 0.924 | 2.5503 | Adam(0.001) |
+| | nrows | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Scratch | 10K | 10 | 64 | .963 | .913 | 3.2778 | 0.01 |
+| TensorFlow | 10K | 10 | 64 | .922 | .982 | 2.8676 | Adam(0.001) |
 
 [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
 

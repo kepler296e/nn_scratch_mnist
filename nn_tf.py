@@ -7,7 +7,7 @@ import time
 
 def main():
     # load data
-    data = pd.read_csv("mnist.csv", header=None, nrows=5000).to_numpy()
+    data = pd.read_csv("mnist.csv", header=None, nrows=10000).to_numpy()
 
     X = data[:, 1:] / 255  # normalize
     y = data[:, 0]
@@ -23,8 +23,8 @@ def main():
     model = tf.keras.models.Sequential(
         [
             tf.keras.Input((784,)),
+            tf.keras.layers.Dense(50, activation="relu"),
             tf.keras.layers.Dense(25, activation="relu"),
-            tf.keras.layers.Dense(15, activation="relu"),
             tf.keras.layers.Dense(10),
         ]
     )
@@ -40,16 +40,21 @@ def main():
         X_train,
         y_train,
         epochs=10,
-        batch_size=4,
+        batch_size=64,
     )
     print("Time:", time.time() - start)
 
     # evaluate
-    y_pred = tf.nn.softmax(model.predict(X_val))
-    y_pred = np.argmax(y_pred, axis=1)
-    print("Accuracy:", np.mean(y_pred == y_val))
+    evaluate(model, X_train, y_train, "Train")
+    evaluate(model, X_val, y_val, "Validation")
 
     # model.save("models/model.keras")
+
+
+def evaluate(model, X, y, data):
+    y_pred = tf.nn.softmax(model.predict(X))
+    y_pred = np.argmax(y_pred, axis=1)
+    print(data, "accuracy:", np.mean(y_pred == y))
 
 
 if __name__ == "__main__":

@@ -3,3 +3,4 @@ __pycache__/
 .vscode/
 nn_scratch.cpp
 nn_scratch.exe
+test.txt
