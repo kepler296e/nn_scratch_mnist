@@ -6,20 +6,19 @@ import time
 
 def main():
     # Load data
-    data = pd.read_csv("mnist.csv", header=None, nrows=10000).to_numpy()
+    data = pd.read_csv("mnist.csv", header=None).to_numpy()
 
     # The first column is the label and the rest are 28x28=784 pixels
     X = data[:, 1:] / 255  # / max to normalize
     y = data[:, 0]
 
-    # Split data into train, validation, and test (80%, 10%, 10%)
+    # Split train and validation
     train = int(len(X) * 0.8)
-    val = int(len(X) * 0.1)
+    val = int(len(X) * 0.2)
     X_train, y_train = X[:train], y[:train]
     X_val, y_val = X[train : train + val], y[train : train + val]
-    X_test, y_test = X[train + val :], y[train + val :]
 
-    np.random.seed(42)  # for reproducibility
+    np.random.seed(42)
 
     # Build model
     layers = [784, 50, 25, 10]
@@ -49,8 +48,6 @@ class NN:
         self.layer_dims = [(layers[i], layers[i + 1]) for i in range(len(layers) - 1)]
         self.W = [np.random.randn(a, b) * np.sqrt(2 / a) for a, b in self.layer_dims]
         self.B = [np.zeros(b) for _, b in self.layer_dims]
-        self.dl_dw = [np.zeros_like(w) for w in self.W]
-        self.dl_db = [np.zeros_like(b) for b in self.B]
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray, epochs, learning_rate, batch_size):
         start_time = time.time()
@@ -61,34 +58,32 @@ class NN:
 
             remainder = len(X_train) % batch_size
             if remainder != 0:
-                # truncate remainder to fit data on batches
-                X_train, y_train = X_train[:-remainder], y_train[:-remainder]
+                # Add extra samples to make it divisible by batch_size
+                X_train = np.concatenate((X_train, X_train[: batch_size - remainder]))
+                y_train = np.concatenate((y_train, y_train[: batch_size - remainder]))
 
             for i in range(0, len(X_train) - remainder, batch_size):
-                X_batch = X_train[i : i + batch_size]  # (64, 784)
-                y_batch = y_train[i : i + batch_size]  # (64,)
+                X_batch = X_train[i : i + batch_size]
+                y_batch = y_train[i : i + batch_size]
 
                 # Forward pass
                 Z, y_pred = self.predict(X_batch)
-                # Z = [(64, 784), (64, 25), (64, 15), (64, 10)]
-                # y_pred = (64, 10) probs for each batch X
 
                 # Loss
-                y_true = np.zeros((batch_size, self.layers[-1]))  # (64, 10)
+                y_true = np.zeros((batch_size, self.layers[-1]))
                 y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
                 epoch_loss += cross_entropy(y_true, y_pred) / batch_size
 
                 # Backprop
-                self.dl_dw, self.dl_db = self.backprop(Z, y_true, y_pred)
+                dW, dB = self.backprop(Z, y_true, y_pred)
 
                 # Update params
-                self.update_params(learning_rate)
+                self.update_params(learning_rate, dW, dB)
 
             print("Epoch:", epoch, "Loss:", epoch_loss)
             loss_history.append(epoch_loss)
 
-        plot_loss(loss_history)
-        plot_loss_derivative(loss_history)
+        # plot_loss(loss_history)
         print("Time:", time.time() - start_time)
 
     def predict(self, X):
@@ -109,48 +104,40 @@ class NN:
 
     def backprop(self, Z, y_true, y_pred):
         dZ = [np.zeros_like(z) for z in Z]
+        dW = [np.zeros_like(w) for w in self.W]
+        dB = [np.zeros_like(b) for b in self.B]
 
-        # Remember that:
-        # layers = [784, 50, 25, 10]
-        # batch_size = 64, so:
-        # Z (activations) = [(64, 784), (64, 50), (64, 25), (64, 10)]
-        # Weights = [(784, 50), (50, 25), (25, 10)]
-        # Biases = [(50,), (25,), (10,)]
+        # Supposing batch_size=64 and layers=[784, 50, 25, 10], then:
+        # Z = [(64, 784), (64, 50), (64, 25), (64, 10)]
+        # W = [(784, 50), (50, 25), (25, 10)]
+        # B = [(50,), (25,), (10,)]
 
-        # dZ is the partial derivative of the loss function with respect to the activations
+        """
+        ∂Loss/∂Z-1 = ∂Loss/∂Softmax * ∂Softmax/∂Z-1
+                   = (Softmax - Y) * Softmax * (1 - Softmax) where Softmax = y_pred
+        ∂Loss/∂W-1 = ∂Loss/∂Z-1 * ∂Z-1/∂W-1
+                   = ∂Loss/∂Z-1 * Z-2
+        ∂Loss/B-1  = ∂Loss/∂Z-1 * ∂Z-1/∂B-1
+                   = ∂Loss/∂Z-1 * 1 (cos the bias is just added)
+        """
 
         # Output layer
-        dZ[-1] = y_pred - y_true  # (64, 10)
-        self.dl_dw[-1] = np.einsum("bi,bj->ji", dZ[-1], Z[-2])  # (64, 10) @ (64, 25) => (25, 10)
-        self.dl_db[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
-
-        """
-        dZ-1 = loss/softmax * softmax/Z-1
-        dW-1 = dZ-1 * Z-2
-        dB-1 = dZ-1
-
-        dZ-2 = dZ-1 * W-1 * dRelu(Z-2)
-        dW-2 = dZ-2 * Z-3
-        dB-2 = dZ-2
-        """
+        dZ[-1] = (y_pred - y_true) * y_pred * (1 - y_pred)  # (64, 10)^3 => (64, 10)
+        dW[-1] = (dZ[-1].T @ Z[-2]).T  # ((64, 10).T @ (64, 25)).T => (25, 10)
+        dB[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
 
         # Hidden layers
         for i in range(-2, -len(self.layers), -1):  # -2, -3
-            dZ[i] = np.einsum("ij,bj->bi", self.W[i + 1], dZ[i + 1]) * relu_derivative(Z[i])
-            self.dl_dw[i] = np.einsum("bi,bj->ji", dZ[i], Z[i - 1])
-            self.dl_db[i] = np.sum(dZ[i], axis=0)
+            dZ[i] = (self.W[i + 1] @ dZ[i + 1].T).T * relu_derivative(Z[i])  # ((25, 10) @ (64, 10).T).T => (64, 25)
+            dW[i] = (dZ[i].T @ Z[i - 1]).T  # ((64, 25).T @ (64, 50)).T => (50, 25)
+            dB[i] = np.sum(dZ[i], axis=0)  # (64, 25) => (25,)
 
-        # When i = -2:
-        # (25, 10) @ (64, 10) => (64, 25)
-        # (64, 25) @ (64, 50) => (50, 25)
-        # (64, 25) => (25,)
+        return dW, dB
 
-        return self.dl_dw, self.dl_db
-
-    def update_params(self, learning_rate):
+    def update_params(self, learning_rate, dW, dB):
         for i in range(len(self.layers) - 1):  # 0, 1, 2
-            self.W[i] -= learning_rate * self.dl_dw[i]
-            self.B[i] -= learning_rate * self.dl_db[i]
+            self.W[i] -= learning_rate * dW[i]
+            self.B[i] -= learning_rate * dB[i]
 
     def count_params(self):
         return sum(np.prod(w.shape) for w in self.W) + sum(np.prod(b.shape) for b in self.B)
@@ -175,7 +162,7 @@ def softmax(logits):
 
 def evaluate(model: NN, X: np.ndarray, y: np.ndarray, data):
     _, y_pred = model.predict(X)
-    y_pred = np.argmax(y_pred, axis=1)  # (64, 10) => (64,)
+    y_pred = np.argmax(y_pred, axis=1)
     accuracy = np.sum(y_pred == y) / len(y)
     print(data, "Accuracy:", accuracy)
 
@@ -184,13 +171,6 @@ def plot_loss(loss_history):
     plt.plot(loss_history)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.show()
-
-
-def plot_loss_derivative(loss_history):
-    plt.plot(np.gradient(loss_history))
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss Derivative")
     plt.show()
 
 

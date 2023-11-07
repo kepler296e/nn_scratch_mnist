@@ -66,13 +66,13 @@ def softmax(logits):
 ```
 
 #### Hiperparameters
-- Epochs: 20
+- Epochs: 10
 - Batch Size: 64
 - Learning Rate: Fixed at 0.01. While more advanced algorithms like [Adam](https://optimization.cbe.cornell.edu/index.php?title=Adam) could be considered, a learning rate of 0.01 achieves an accuracy of approximately 98%, which is enough for practical purposes.
 - Weight Initialization: [He initialization](https://machinelearningmastery.com/weight-initialization-for-deep-learning-neural-networks/) for weights.
 
 #### After 20 epochs, the loss functions doesn't change much:
-<img src="screenshots/dloss.png" width="50%" height="50%">
+<img src="screenshots/loss.png" width="50%" height="50%">
 
 #### Model implementation in Python:
 ```python
@@ -117,51 +117,40 @@ def predict(self, X):
 
 #### Explanation
 1. **Input Layer**:
-    - Set the input layer activations as `X`.
+    - The input layer `Z[0]`  is just the input itself.
 2. **Hidden Layers**:
     - For each hidden layer:
-        - For each hidden neuron:
-            - This neuron relies on all previous layer neurons * its mutual weights: n1w1 + n2w2 + ... + nNwN, and thats literally the definition of dot product: `Z[i] @ W[i]`
-            - Add the bias: `+ B[i]`
-            - Use `relu()` as the activation function.
-            - It's done!
+        - The neuron activations `Z[n]` are computed in parallel using ReLU = $max$ between $0$ and $W_{n-1} \cdot Z_{n-1} + B_n$ where $n$ is the layer.
 3. **Output Layer**:
-    - Similar to the hidden layers but with linear activation.
-    - Apply `softmax()` to get the probabilities of each digit.
+    - Similar to the hidden layers, but with linear activation instead.
+    - And then the 10-vector ouput pass through `softmax()` to get the probabilities of each digit.
 
 ## Loss Function: Cross-entropy
 Being the generalization of the well-known [log-loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) function for binary classification, cross-entropy is a natural choice for multi-class classification problem.
 
 For each training example:
-- `y_pred` is the ouput of the nn, a 10-vector containing the probabilities of each digit.
-- `y_true` is the true label one hot encoded.
+- `y_pred` is `softmax(Z[-1])` where `Z[-1]` is the nn's output layer, a 10-vector, softmax just return the probs that sums to 1.
+- `y_true` is just the true label one hot encoded, that is for example `[0, 0, 0, 1, 0, 0, 0, 0, 0, 0]` when the true label is `3`.
 
-It works as follows:
+Implementation:
 ```python
-# Loss, with batch_size=64 and layers[-1]=10
-y_true = np.zeros((batch_size, self.layers[-1]))  # (64, 10)
+y_true = np.zeros((batch_size, self.layers[-1]))
 y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
 epoch_loss += cross_entropy(y_true, y_pred) / batch_size
 ```
-One hot encoded means that for example if the label is $4$, then `y_true` will be `[0, 0, 0, 0, 1, 0, 0, 0, 0, 0]`.
 
-Where `cross_entropy` is defined as:
+Where `cross_entropy()` is defined as follows:
 ```python
 def cross_entropy(y_true, y_pred):
     return -np.sum(y_true * np.log(y_pred + 1e-8))  # 1e-8 to avoid ln(0)
 ```
 
-`np.log(y_pred)` will always return negative values because `y_pred` will always be between `0` and `1`, and `ln(x)` is negative for `0 < x < 1`.
+`np.log(y_pred)` is always negative cos its input `y_pred` is a probability that ranges from 0 to 1 (as shown in the picture below). Therefore, we multiply it by `-1` to obtain a positive loss. We also add a very small number to avoid `ln(0)`, which is undefined, as there is no number to which you can raise `e` to obtain `0`.
 
 <img src="screenshots/ln.png" width="50%" height="50%">
 
-So `np.sum()` must be multiply by `-1` to get the loss as positive.
-
-#### Loss function over epochs
-<img src="screenshots/loss.png" width="50%" height="50%">
-
 ## Learning and Optimization: Gradient Descent
-Neural netorks learns by iteratively adjusting it's weights and biases to minimize the loss function. This is done by calculating the partial derivatives of the loss function with respect to the weights and biases, and then updating the weights and biases in the opposite direction of the gradient.
+Neural netorks learns by iteratively adjusting it's weights and biases to minimize the loss function. This is done by calculating the partial derivatives of the loss function with respect to the weights and biases, and then updating them in the opposite direction of the gradient.
 
 #### Gradient descent
 $$w = w - \alpha \frac{\partial L}{\partial w}$$
@@ -169,68 +158,62 @@ $$b = b - \alpha \frac{\partial L}{\partial b}$$
 
 Where $\alpha$ is the learning rate.
 
-#### How much does the loss function change when we change the weights and biases?
+#### How much does the loss function change when the weights and biases change?
 
 Using the chain rule:
 $$\frac{\partial L}{\partial w} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial w}$$
 $$\frac{\partial L}{\partial b} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial b}$$
 
-Where $z$ is the output of a neuron.
+Where $z$ are the activation functions of the neurons.
 
 #### Implementation in Python:
 ```python
 def backprop(self, Z, y_true, y_pred):
     dZ = [np.zeros_like(z) for z in Z]
+    dW = [np.zeros_like(w) for w in self.W]
+    dB = [np.zeros_like(b) for b in self.B]
 
-    # Remember that:
-    # layers = [784, 50, 25, 10]
-    # batch_size = 64, so:
-    # Z (activations) = [(64, 784), (64, 50), (64, 25), (64, 10)]
-    # Weights = [(784, 50), (50, 25), (25, 10)]
-    # Biases = [(50,), (25,), (10,)]
+    # Supposing batch_size=64 and layers=[784, 50, 25, 10], then:
+    # Z = [(64, 784), (64, 50), (64, 25), (64, 10)]
+    # W = [(784, 50), (50, 25), (25, 10)]
+    # B = [(50,), (25,), (10,)]
 
-    # dZ is the partial derivative of the loss function with respect to the activations
+    """
+    ∂Loss/∂Z-1 = ∂Loss/∂Softmax * ∂Softmax/∂Z-1
+                = (Softmax - Y) * Softmax * (1 - Softmax) where Softmax = y_pred
+    ∂Loss/∂W-1 = ∂Loss/∂Z-1 * ∂Z-1/∂W-1
+                = ∂Loss/∂Z-1 * Z-2
+    ∂Loss/B-1  = ∂Loss/∂Z-1 * ∂Z-1/∂B-1
+                = ∂Loss/∂Z-1 * 1 (cos the bias is just added)
+    """
 
     # Output layer
-    dZ[-1] = y_pred - y_true  # (64, 10)
-    self.dl_dw[-1] = np.einsum("bi,bj->ji", dZ[-1], Z[-2])  # (64, 10) @ (64, 25) => (25, 10)
-    self.dl_db[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
-
-    """
-    dZ-1 = loss/softmax * softmax/Z-1
-    dW-1 = dZ-1 * Z-2
-    dB-1 = dZ-1
-
-    dZ-2 = dZ-1 * W-1 * dRelu(Z-2)
-    dW-2 = dZ-2 * Z-3
-    dB-2 = dZ-2
-    """
+    dZ[-1] = (y_pred - y_true) * y_pred * (1 - y_pred)  # (64, 10)^3 => (64, 10)
+    dW[-1] = (dZ[-1].T @ Z[-2]).T  # ((64, 10).T @ (64, 25)).T => (25, 10)
+    dB[-1] = np.sum(dZ[-1], axis=0)  # (64, 10) => (10,)
 
     # Hidden layers
     for i in range(-2, -len(self.layers), -1):  # -2, -3
-        dZ[i] = np.einsum("ij,bj->bi", self.W[i + 1], dZ[i + 1]) * relu_derivative(Z[i])
-        self.dl_dw[i] = np.einsum("bi,bj->ji", dZ[i], Z[i - 1])
-        self.dl_db[i] = np.sum(dZ[i], axis=0)
+        dZ[i] = (self.W[i + 1] @ dZ[i + 1].T).T * relu_derivative(Z[i])  # ((25, 10) @ (64, 10).T).T => (64, 25)
+        dW[i] = (dZ[i].T @ Z[i - 1]).T  # ((64, 25).T @ (64, 50)).T => (50, 25)
+        dB[i] = np.sum(dZ[i], axis=0)  # (64, 25) => (25,)
 
-    # When i = -2:
-    # (25, 10) @ (64, 10) => (64, 25)
-    # (64, 25) @ (64, 50) => (50, 25)
-    # (64, 25) => (25,)
-
-    return self.dl_dw, self.dl_db
+    return dW, dB
 ```
 
 ## Real-Time Digit Recognition
-After saving the parameters as `scratch_model.npy` using `save_model()`, we can import [nn_scratch.py](nn_scratch.py) and call the `predict()` function over whatever 784-vector we want.
+After training, evaluation, and playing with the hyperparameters to improve the performance, we can save the trained weights and biasses using `save_model()` and load it with `load_model()`.
 
-I have built a pretty-basic 28x28 canvas >.< using [PyGame](https://en.wikipedia.org/wiki/Pygame) to draw and see the predictions that our scratch model does in real-time.
+I have built a pretty-basic 28x28 canvas >.< using [PyGame](https://en.wikipedia.org/wiki/Pygame) to draw and see the predictions of our scratch model in real-time.
 
+[draw_scratch.py](draw_scratch.py)
+
+It does a prediction every second (if the canvas is not empty xD)
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
-    X = get_X() / 255
+    X = get_X() / 255 # normalize
     y = model.predict(X)[0]
 ```
-[draw_scratch.py](draw_scratch.py)
 
 #### Controls:
 - `Left-click` to draw.
@@ -241,11 +224,14 @@ if frames % FPS == 0 and cells.sum() > 0:
 <img src="screenshots/3.png" width="50%" height="50%">
 
 ## Scratch vs. TensorFlow
+Using batch parallelization, the Scratch model outperforms the TensorFlow implementation in time, but accuracy is pretty much the same. The idea of the project was to learn how neural networks work, so I didn't focus on performance >:p
 | | nrows | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Scratch | 10K | 10 | 64 | .963 | .913 | 3.2778 | 0.01 |
-| TensorFlow | 10K | 10 | 64 | .922 | .982 | 2.8676 | Adam(0.001) |
+| Scratch | 60K | 10 | 64 | .981 | .963 | 6.2892 | 0.01 |
+| TensorFlow | 60K | 10 | 64 | .987 | .966 | 11.3353 | Adam(0.001) |
 
 [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
 
 [nn_tf.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_tf.py)
+
+That's all, it was such a fun project! bye

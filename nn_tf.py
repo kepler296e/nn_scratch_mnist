@@ -6,20 +6,20 @@ import time
 
 
 def main():
-    # load data
-    data = pd.read_csv("mnist.csv", header=None, nrows=10000).to_numpy()
+    # Load data
+    data = pd.read_csv("mnist.csv", header=None).to_numpy()
 
-    X = data[:, 1:] / 255  # normalize
+    # The first column is the label and the rest are 28x28=784 pixels
+    X = data[:, 1:] / 255  # / max to normalize
     y = data[:, 0]
 
-    # split data
+    # Split train and validation
     train = int(len(X) * 0.8)
-    val = int(len(X) * 0.1)
+    val = int(len(X) * 0.2)
     X_train, y_train = X[:train], y[:train]
     X_val, y_val = X[train : train + val], y[train : train + val]
-    X_test, y_test = X[train + val :], y[train + val :]
 
-    # build model
+    # Build model
     model = tf.keras.models.Sequential(
         [
             tf.keras.Input((784,)),
@@ -34,15 +34,15 @@ def main():
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     )
 
-    # train
-    start = time.time()
+    # Train
+    start_time = time.time()
     model.fit(
         X_train,
         y_train,
         epochs=10,
         batch_size=64,
     )
-    print("Time:", time.time() - start)
+    print("Time:", time.time() - start_time)
 
     # evaluate
     evaluate(model, X_train, y_train, "Train")
