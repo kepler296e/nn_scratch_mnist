@@ -35,11 +35,6 @@ The [MNIST dataset](https://en.wikipedia.org/wiki/MNIST_database) consists of 70
 #### Preprocessing
 The data is normalized as pixel_value / 255.
 
-#### Split
-- 80% for training
-- 10% for validation
-- 10% for testing
-
 ## Neural Network Architecture
 #### Input layer
 - 784 neurons, one for each pixel.

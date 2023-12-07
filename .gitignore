@@ -4,3 +4,7 @@ __pycache__/
 nn_scratch.cpp
 nn_scratch.exe
 test.txt
+
+openclops.py
+nn_scratch_gpu.py
+gpu_test.py

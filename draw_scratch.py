@@ -50,8 +50,8 @@ def main():
 
         if frames % FPS == 0 and cells.sum() > 0:
             X = get_X() / 255
-            _, y_pred2 = model.predict(X)
-            y_pred = y_pred2[0]
+            _, y_pred = model.forward(X)
+            y_pred = y_pred[0]
 
         SCREEN.fill((0, 0, 0))
         draw()

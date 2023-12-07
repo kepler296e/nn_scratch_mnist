@@ -9,14 +9,13 @@ def main():
     data = pd.read_csv("mnist.csv", header=None).to_numpy()
 
     # The first column is the label and the rest are 28x28=784 pixels
-    X = data[:, 1:] / 255  # / max to normalize
+    X = data[:, 1:] / 255  # divide by max=255 to normalize
     y = data[:, 0]
 
     # Split train and validation
-    train = int(len(X) * 0.8)
-    val = int(len(X) * 0.2)
-    X_train, y_train = X[:train], y[:train]
-    X_val, y_val = X[train : train + val], y[train : train + val]
+    train_size = int(len(X) * 0.8)
+    train_data = X[:train_size], y[:train_size]
+    val_data = X[train_size:], y[train_size:]
 
     np.random.seed(42)
 
@@ -24,69 +23,87 @@ def main():
     layers = [784, 50, 25, 10]
     model = NN(layers)
 
-    print("Parameters:", model.count_params())
+    print(model.count_params(), "parameters")
 
     # Train
     model.fit(
-        X_train,
-        y_train,
+        train_data,
+        val_data,
         epochs=10,
+        eval_every=1,
         learning_rate=0.01,
         batch_size=64,
     )
 
     # Evaluate
-    evaluate(model, X_train, y_train, "Train")
-    evaluate(model, X_val, y_val, "Validation")
+    evaluate(model, val_data)
 
-    # save_model(model, "models/scratch_model.npy")
+    save_model(model, "models/scratch_model.npy")
 
 
 class NN:
     def __init__(self, layers):
         self.layers = layers
-        self.layer_dims = [(layers[i], layers[i + 1]) for i in range(len(layers) - 1)]
-        self.W = [np.random.randn(a, b) * np.sqrt(2 / a) for a, b in self.layer_dims]
-        self.B = [np.zeros(b) for _, b in self.layer_dims]
+        self.W = [np.random.randn(i, j) * np.sqrt(2 / i) for i, j in zip(layers[:-1], layers[1:])]  # xavier init
+        self.B = [np.zeros(i) for i in layers[1:]]
 
-    def fit(self, X_train: np.ndarray, y_train: np.ndarray, epochs, learning_rate, batch_size):
-        start_time = time.time()
-        loss_history = []
+    def fit(self, train_data, val_data, epochs, eval_every, learning_rate, batch_size):
+        start_train_time = time.time()
+        lossi = []
 
         for epoch in range(epochs):
-            epoch_loss = 0
+            train_loss = self.train(train_data, batch_size, learning_rate)
 
-            remainder = len(X_train) % batch_size
-            if remainder != 0:
-                # Add extra samples to make it divisible by batch_size
-                X_train = np.concatenate((X_train, X_train[: batch_size - remainder]))
-                y_train = np.concatenate((y_train, y_train[: batch_size - remainder]))
+            if (epoch + 1) % eval_every == 0:
+                val_loss = self.eval(val_data, batch_size)
+                print(f"Epoch {epoch + 1}/{epochs}, Train loss {train_loss:.4f}, Val loss {val_loss:.4f}")
 
-            for i in range(0, len(X_train) - remainder, batch_size):
-                X_batch = X_train[i : i + batch_size]
-                y_batch = y_train[i : i + batch_size]
+            lossi.append(train_loss)
 
-                # Forward pass
-                Z, y_pred = self.predict(X_batch)
+        print("Train time", time.time() - start_train_time)
+        plot_loss(lossi)
 
-                # Loss
-                y_true = np.zeros((batch_size, self.layers[-1]))
-                y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
-                epoch_loss += cross_entropy(y_true, y_pred) / batch_size
+    def train(self, train_data, batch_size, learning_rate):
+        X_train, y_train = train_data
 
-                # Backprop
-                dW, dB = self.backprop(Z, y_true, y_pred)
+        train_loss = 0
+        for i in range(0, len(X_train) - len(X_train) % batch_size, batch_size):
+            X_batch = X_train[i : i + batch_size]
+            y_batch = y_train[i : i + batch_size]
 
-                # Update params
-                self.update_params(learning_rate, dW, dB)
+            # Forward pass
+            Z, y_pred = self.forward(X_batch)
 
-            print("Epoch:", epoch, "Loss:", epoch_loss)
-            loss_history.append(epoch_loss)
+            # Loss
+            y_true = np.zeros((batch_size, self.layers[-1]))
+            y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
+            train_loss += cross_entropy(y_true, y_pred) / batch_size
 
-        # plot_loss(loss_history)
-        print("Time:", time.time() - start_time)
+            # Backprop
+            dW, dB = self.backprop(Z, y_true, y_pred)
 
-    def predict(self, X):
+            # Update params
+            self.update_params(learning_rate, dW, dB)
+
+        return train_loss / (len(X_train) // batch_size)
+
+    def eval(self, val_data, batch_size):
+        X_val, y_val = val_data
+
+        val_loss = 0
+        for i in range(0, len(X_val) - len(X_val) % batch_size, batch_size):
+            X_batch = X_val[i : i + batch_size]
+            y_batch = y_val[i : i + batch_size]
+
+            _, y_pred = self.forward(X_batch)
+
+            y_true = np.zeros((batch_size, self.layers[-1]))
+            y_true[np.arange(batch_size), y_batch] = 1
+            val_loss += cross_entropy(y_true, y_pred) / batch_size
+
+        return val_loss / (len(X_val) // batch_size)
+
+    def forward(self, X):
         batch_size = X.shape[0]
         Z = [np.zeros((batch_size, c)) for c in self.layers]
 
@@ -156,19 +173,26 @@ def cross_entropy(y_true, y_pred):
 
 
 def softmax(logits):
+    logits -= np.max(logits, axis=1, keepdims=True)  # (64, 10) - (64, 1)
     exp_logits = np.exp(logits)  # (64, 10)
     return exp_logits / np.sum(exp_logits, axis=1, keepdims=True)  # (64, 10) / (64, 1)
 
 
-def evaluate(model: NN, X: np.ndarray, y: np.ndarray, data):
-    _, y_pred = model.predict(X)
+def evaluate(model, data):
+    X, y = data
+    _, y_pred = model.forward(X)
     y_pred = np.argmax(y_pred, axis=1)
-    accuracy = np.sum(y_pred == y) / len(y)
-    print(data, "Accuracy:", accuracy)
+
+    # Accuracy
+    print("Accuracy", np.mean(y_pred == y))
+
+    # Confusion matrix
+    print("Confusion matrix")
+    print(pd.crosstab(y, y_pred, rownames=["True"], colnames=["Pred"]))
 
 
-def plot_loss(loss_history):
-    plt.plot(loss_history)
+def plot_loss(lossi):
+    plt.plot(lossi)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.show()
