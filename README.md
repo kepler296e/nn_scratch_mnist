@@ -224,8 +224,8 @@ if frames % FPS == 0 and cells.sum() > 0:
 Using batch parallelization, the Scratch model outperforms the TensorFlow implementation in time, but accuracy is pretty much the same. The idea of the project was to learn how neural networks work, so I didn't focus on performance >:p
 | | nrows | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Scratch | 60K | 10 | 64 | .981 | .963 | 6.2892 | 0.01 |
-| TensorFlow | 60K | 10 | 64 | .987 | .966 | 11.3353 | Adam(0.001) |
+| Scratch | 60K | 10 | 128 | 0.0841 | 0.1345 | 5.1375 | 0.01 |
+| TensorFlow | 60K | 10 | 128 | 0.0710 | 0.1556 | 6.7309 | Adam(0.01) |
 
 [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
 

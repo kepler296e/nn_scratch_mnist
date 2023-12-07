@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import tensorflow as tf
 import time
 
@@ -10,14 +9,13 @@ def main():
     data = pd.read_csv("mnist.csv", header=None).to_numpy()
 
     # The first column is the label and the rest are 28x28=784 pixels
-    X = data[:, 1:] / 255  # / max to normalize
+    X = data[:, 1:] / 255  # divide by max=255 to normalize
     y = data[:, 0]
 
     # Split train and validation
-    train = int(len(X) * 0.8)
-    val = int(len(X) * 0.2)
-    X_train, y_train = X[:train], y[:train]
-    X_val, y_val = X[train : train + val], y[train : train + val]
+    train_size = int(len(X) * 0.8)
+    X_train, y_train = X[:train_size], y[:train_size]
+    X_val, y_val = X[train_size:], y[train_size:]
 
     # Build model
     model = tf.keras.models.Sequential(
@@ -30,7 +28,7 @@ def main():
     )
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     )
 
@@ -40,21 +38,29 @@ def main():
         X_train,
         y_train,
         epochs=10,
-        batch_size=64,
+        batch_size=128,
     )
     print("Time:", time.time() - start_time)
 
-    # evaluate
-    evaluate(model, X_train, y_train, "Train")
-    evaluate(model, X_val, y_val, "Validation")
+    # Evaluate
+    evaluate(model, X_val, y_val)
 
-    # model.save("models/model.keras")
+    model.save("models/tf.keras")
 
 
-def evaluate(model, X, y, data):
-    y_pred = tf.nn.softmax(model.predict(X))
+def evaluate(model, X, y):
+    y_pred = model.predict(X)
     y_pred = np.argmax(y_pred, axis=1)
-    print(data, "accuracy:", np.mean(y_pred == y))
+
+    # Accuracy
+    print("Accuracy", np.mean(y_pred == y))
+
+    # Confusion matrix
+    # print("Confusion matrix")
+    # print(pd.crosstab(y, y_pred, rownames=["True"], colnames=["Pred"]))
+
+    # val loss
+    print("Val loss", model.evaluate(X, y))
 
 
 if __name__ == "__main__":

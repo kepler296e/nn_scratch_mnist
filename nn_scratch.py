@@ -32,13 +32,13 @@ def main():
         epochs=10,
         eval_every=1,
         learning_rate=0.01,
-        batch_size=64,
+        batch_size=128,
     )
 
     # Evaluate
     evaluate(model, val_data)
 
-    save_model(model, "models/scratch_model.npy")
+    save_model(model, "models/scratch.npy")
 
 
 class NN:
@@ -61,7 +61,7 @@ class NN:
             lossi.append(train_loss)
 
         print("Train time", time.time() - start_train_time)
-        plot_loss(lossi)
+        # plot_loss(lossi)
 
     def train(self, train_data, batch_size, learning_rate):
         X_train, y_train = train_data
