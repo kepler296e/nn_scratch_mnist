@@ -1,6 +1,8 @@
 # Neural Network from Scratch: Digit Recognition
 A fast and cool MLP from scratch in Python that classifies handwritten digits from the [MNIST dataset](#mnist-dataset).
 
+Video (Spanish): https://www.youtube.com/watch?v=0eb_RSzP3rY
+
 #### UPDATE 7/11/23:
 Added parallelization with batches => now trains **x17** faster! :D
 
