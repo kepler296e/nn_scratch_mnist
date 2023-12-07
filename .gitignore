@@ -1,10 +1,4 @@
-mnist.csv
-__pycache__/
-.vscode/
-nn_scratch.cpp
-nn_scratch.exe
-test.txt
+/__pycache__
+/gpu
 
-openclops.py
-nn_scratch_gpu.py
-gpu_test.py
+mnist_train.csv

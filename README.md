@@ -1,10 +1,8 @@
 # Neural Network from Scratch: Digit Recognition
 A fast and cool MLP from scratch in Python that classifies handwritten digits from the [MNIST dataset](#mnist-dataset).
+At the end there is a [comparission](#scratch-vs-tensorflow-vs-pytorch) vs TensorFlow and PyTorch (and the scratch outperforms :p)
 
 Video (Spanish): https://www.youtube.com/watch?v=0eb_RSzP3rY
-
-#### UPDATE 7/11/23:
-Added parallelization with batches => now trains **x17** faster! :D
 
 #### Screenshots
 <img src="screenshots/0.png" width="15%" height="15%"> <img src="screenshots/1.png" width="15%" height="15%"> <img src="screenshots/2.png" width="15%" height="15%"> <img src="screenshots/3.png" width="15%" height="15%">
@@ -16,11 +14,12 @@ Added parallelization with batches => now trains **x17** faster! :D
 ## Table of Contents
 1. [MNIST dataset](#mnist-dataset)
 2. [Neural Network Architecture](#neural-network-architecture)
-3. [Forward propagation](#forward-propagation)
-4. [Loss Function: Cross-entropy](#loss-function-cross-entropy)
-5. [Learning and Optimization: Gradient Descent](#learning-and-optimization-gradient-descent)
-6. [Real-Time Digit Recognition](#real-time-digit-recognition)
-7. [Scratch vs. TensorFlow](#scratch-vs-tensorflow)
+3. [Batch Parallelization](#batch-parallelization)
+4. [Forward propagation](#forward-propagation)
+5. [Loss Function: Cross-entropy](#loss-function-cross-entropy)
+6. [Learning and Optimization: Gradient Descent](#learning-and-optimization-gradient-descent)
+7. [Real-Time Digit Recognition](#real-time-digit-recognition)
+8. [Scratch vs. TensorFlow vs. PyTorch](#scratch-vs-tensorflow-vs-pytorch)
 
 #### Cross-entropy loss function
 $$J(p,q) = -\sum_{x}p(x)log(q(x))$$
@@ -73,29 +72,49 @@ def softmax(logits):
 
 #### Model implementation in Python:
 ```python
-layers = [784, 50, 25, 10]
-model = NN(layers)
+# Load data
+X_train, y_train = nn_data.X_train, nn_data.y_train
+X_val, y_val = nn_data.X_val, nn_data.y_val
+
+# Build model
+model = NN(layers=[28 * 28, 50, 25, 10])
+print(model.count_params(), "parameters")
 
 # Train
 model.fit(
     X_train,
     y_train,
+    X_val,
+    y_val,
     epochs=10,
-    learning_rate=0.01,
-    batch_size=64,
+    eval_every=1,
+    lr=0.01,
+    batch_size=128,
 )
 
-# Evaluate
-evaluate(model, X_train, y_train, "Train")
-evaluate(model, X_val, y_val, "Validation")
+model.evaluate(X_val, y_val)
+model.save("models/scratch.npy")
 ```
 [nn_scratch.py](nn_scratch.py)
+
+[nn_data.py](nn_data.py)
+
+## Batch Parallelization
+Training on a series (one example after another) takes an eternity, so it's better to exploit parallel computing by training over a `batch_size` (i.e. 64, 128) examples at the same time. Of course, batches improve speed, but at the cost of more GPU or CPU usage. Large batches, e.g. the whole dataset, will cause the model to only adjust once per epoch, so it won't learn much.
+
+In `train` and `eval` im using:
+```python
+for i in range(0, len(X) - len(X) % batch_size, batch_size):
+    X_batch = X[i : i + batch_size]
+    y_batch = y[i : i + batch_size]
+```
+To train `batch_size` at a time, you can then divide the loss by `len(X_train) / batch_size` to get the average loss per example.
 
 ## Forward propagation
 The `predict(X)` function performs the forward propagation as follows:
 
 ```python
-def predict(self, X):
+def forward(self, X):
     batch_size = X.shape[0]
     Z = [np.zeros((batch_size, c)) for c in self.layers]
 
@@ -133,7 +152,7 @@ Implementation:
 ```python
 y_true = np.zeros((batch_size, self.layers[-1]))
 y_true[np.arange(batch_size), y_batch] = 1  # label one hot encoded
-epoch_loss += cross_entropy(y_true, y_pred) / batch_size
+train_loss += cross_entropy(y_true, y_pred) / batch_size
 ```
 
 Where `cross_entropy()` is defined as follows:
@@ -208,8 +227,9 @@ I have built a pretty-basic 28x28 canvas >.< using [PyGame](https://en.wikipedia
 It does a prediction every second (if the canvas is not empty xD)
 ```python
 if frames % FPS == 0 and cells.sum() > 0:
-    X = get_X() / 255 # normalize
-    y = model.predict(X)[0]
+    X = get_X() / 255
+    _, y_pred = model.forward(X)
+    y_pred = y_pred[0]
 ```
 
 #### Controls:
@@ -220,15 +240,18 @@ if frames % FPS == 0 and cells.sum() > 0:
 #### Example:
 <img src="screenshots/3.png" width="50%" height="50%">
 
-## Scratch vs. TensorFlow
+## Scratch vs. TensorFlow vs. PyTorch
 Using batch parallelization, the Scratch model outperforms the TensorFlow implementation in time, but accuracy is pretty much the same. The idea of the project was to learn how neural networks work, so I didn't focus on performance >:p
 | | nrows | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | Scratch | 60K | 10 | 128 | 0.0841 | 0.1345 | 5.1375 | 0.01 |
 | TensorFlow | 60K | 10 | 128 | 0.0710 | 0.1556 | 6.7309 | Adam(0.01) |
+| PyTorch | 60K | 10 | 128 | 0.0793 | 0.1490 | 8.1293 | Adam(0.01) |
 
 [nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
 
 [nn_tf.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_tf.py)
+
+[nn_torch.py](nn_pytorch.py)
 
 That's all, it was such a fun project! bye

@@ -1,44 +1,33 @@
 import numpy as np
 import pandas as pd
+import nn_data
 import matplotlib.pyplot as plt
 import time
 
 
 def main():
     # Load data
-    data = pd.read_csv("mnist.csv", header=None).to_numpy()
-
-    # The first column is the label and the rest are 28x28=784 pixels
-    X = data[:, 1:] / 255  # divide by max=255 to normalize
-    y = data[:, 0]
-
-    # Split train and validation
-    train_size = int(len(X) * 0.8)
-    train_data = X[:train_size], y[:train_size]
-    val_data = X[train_size:], y[train_size:]
-
-    np.random.seed(42)
+    X_train, y_train = nn_data.X_train, nn_data.y_train
+    X_val, y_val = nn_data.X_val, nn_data.y_val
 
     # Build model
-    layers = [784, 50, 25, 10]
-    model = NN(layers)
-
+    model = NN(layers=[28 * 28, 50, 25, 10])
     print(model.count_params(), "parameters")
 
     # Train
     model.fit(
-        train_data,
-        val_data,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
         epochs=10,
         eval_every=1,
-        learning_rate=0.01,
+        lr=0.01,
         batch_size=128,
     )
 
-    # Evaluate
-    evaluate(model, val_data)
-
-    save_model(model, "models/scratch.npy")
+    model.evaluate(X_val, y_val)
+    model.save("models/scratch.npy")
 
 
 class NN:
@@ -47,15 +36,15 @@ class NN:
         self.W = [np.random.randn(i, j) * np.sqrt(2 / i) for i, j in zip(layers[:-1], layers[1:])]  # xavier init
         self.B = [np.zeros(i) for i in layers[1:]]
 
-    def fit(self, train_data, val_data, epochs, eval_every, learning_rate, batch_size):
+    def fit(self, X_train, y_train, X_val, y_val, epochs, eval_every, lr, batch_size):
         start_train_time = time.time()
         lossi = []
 
         for epoch in range(epochs):
-            train_loss = self.train(train_data, batch_size, learning_rate)
+            train_loss = self.train(X_train, y_train, batch_size, lr)
 
             if (epoch + 1) % eval_every == 0:
-                val_loss = self.eval(val_data, batch_size)
+                val_loss = self.eval(X_val, y_val, batch_size)
                 print(f"Epoch {epoch + 1}/{epochs}, Train loss {train_loss:.4f}, Val loss {val_loss:.4f}")
 
             lossi.append(train_loss)
@@ -63,9 +52,7 @@ class NN:
         print("Train time", time.time() - start_train_time)
         # plot_loss(lossi)
 
-    def train(self, train_data, batch_size, learning_rate):
-        X_train, y_train = train_data
-
+    def train(self, X_train, y_train, batch_size, lr):
         train_loss = 0
         for i in range(0, len(X_train) - len(X_train) % batch_size, batch_size):
             X_batch = X_train[i : i + batch_size]
@@ -83,13 +70,11 @@ class NN:
             dW, dB = self.backprop(Z, y_true, y_pred)
 
             # Update params
-            self.update_params(learning_rate, dW, dB)
+            self.update_params(lr, dW, dB)
 
-        return train_loss / (len(X_train) // batch_size)
+        return train_loss / (len(X_train) / batch_size)
 
-    def eval(self, val_data, batch_size):
-        X_val, y_val = val_data
-
+    def eval(self, X_val, y_val, batch_size):
         val_loss = 0
         for i in range(0, len(X_val) - len(X_val) % batch_size, batch_size):
             X_batch = X_val[i : i + batch_size]
@@ -101,7 +86,7 @@ class NN:
             y_true[np.arange(batch_size), y_batch] = 1
             val_loss += cross_entropy(y_true, y_pred) / batch_size
 
-        return val_loss / (len(X_val) // batch_size)
+        return val_loss / (len(X_val) / batch_size)
 
     def forward(self, X):
         batch_size = X.shape[0]
@@ -151,13 +136,28 @@ class NN:
 
         return dW, dB
 
-    def update_params(self, learning_rate, dW, dB):
+    def update_params(self, lr, dW, dB):
         for i in range(len(self.layers) - 1):  # 0, 1, 2
-            self.W[i] -= learning_rate * dW[i]
-            self.B[i] -= learning_rate * dB[i]
+            self.W[i] -= lr * dW[i]
+            self.B[i] -= lr * dB[i]
 
     def count_params(self):
         return sum(np.prod(w.shape) for w in self.W) + sum(np.prod(b.shape) for b in self.B)
+
+    def evaluate(self, X, y):
+        _, y_pred = self.forward(X)
+        y_pred = np.argmax(y_pred, axis=1)
+
+        # Accuracy
+        print("Accuracy", np.mean(y_pred == y))
+
+        # Confusion matrix
+        print("Confusion matrix")
+        print(pd.crosstab(y, y_pred, rownames=["True"], colnames=["Pred"]))
+
+    def save(self, filepath):
+        model_data = {"layers": self.layers, "W": self.W, "B": self.B}
+        np.save(filepath, model_data)
 
 
 def relu(X):
@@ -178,29 +178,11 @@ def softmax(logits):
     return exp_logits / np.sum(exp_logits, axis=1, keepdims=True)  # (64, 10) / (64, 1)
 
 
-def evaluate(model, data):
-    X, y = data
-    _, y_pred = model.forward(X)
-    y_pred = np.argmax(y_pred, axis=1)
-
-    # Accuracy
-    print("Accuracy", np.mean(y_pred == y))
-
-    # Confusion matrix
-    print("Confusion matrix")
-    print(pd.crosstab(y, y_pred, rownames=["True"], colnames=["Pred"]))
-
-
 def plot_loss(lossi):
     plt.plot(lossi)
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.show()
-
-
-def save_model(model, filepath):
-    model_data = {"layers": model.layers, "W": model.W, "B": model.B}
-    np.save(filepath, model_data)
 
 
 def load_model(filepath):
