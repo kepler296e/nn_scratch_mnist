@@ -3,6 +3,8 @@ import numpy as np
 import tensorflow as tf
 import torch
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def load_data(pytorch=False):
     mnist = pd.read_csv("mnist_train.csv", header=None).to_numpy()
@@ -25,10 +27,10 @@ def load_data(pytorch=False):
 
     if pytorch:
         return (
-            torch.tensor(X_train, dtype=torch.float32),
-            torch.tensor(y_train, dtype=torch.long),
-            torch.tensor(X_val, dtype=torch.float32),
-            torch.tensor(y_val, dtype=torch.long),
+            torch.tensor(X_train, dtype=torch.float32, device=DEVICE),
+            torch.tensor(y_train, dtype=torch.long, device=DEVICE),
+            torch.tensor(X_val, dtype=torch.float32, device=DEVICE),
+            torch.tensor(y_val, dtype=torch.long, device=DEVICE),
         )
     else:
         return X_train, y_train, X_val, y_val

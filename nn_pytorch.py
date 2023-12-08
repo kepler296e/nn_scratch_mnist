@@ -3,7 +3,30 @@ import torch.nn as nn
 import nn_data
 import time
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+def main():
+    # Load data
+    X_train, y_train, X_val, y_val = nn_data.load_data(pytorch=True)
+
+    # Build model
+    model = NN().to(nn_data.DEVICE)
+    print(model.count_params(), "parameters")
+
+    # Train
+    start_train_time = time.time()
+    model.fit(
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        epochs=10,
+        eval_every=1,
+        lr=0.01,
+        batch_size=128,
+    )
+    print("Train time", time.time() - start_train_time)
+
+    torch.save(model.state_dict(), "models/pytorch.pth")
 
 
 class NN(nn.Module):
@@ -30,7 +53,7 @@ class NN(nn.Module):
         logits = self.linear_relu_stack(X)
         return logits
 
-    def train(self, X_train, y_train, X_val, y_val, epochs, eval_every, lr, batch_size):
+    def fit(self, X_train, y_train, X_val, y_val, epochs, eval_every, lr, batch_size):
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
 
@@ -55,25 +78,5 @@ class NN(nn.Module):
                 print(f"Epoch {epoch + 1}/{epochs}, Train loss {train_loss:.4f}, Val loss {val_loss:.4f}")
 
 
-# Load data
-nn_data.load_data(pytorch=True)
-
-# Build model
-model = NN().to(DEVICE)
-print(model.count_params(), "parameters")
-
-# Train
-start_train_time = time.time()
-model.train(
-    X_train,
-    y_train,
-    X_val,
-    y_val,
-    epochs=10,
-    eval_every=1,
-    lr=0.01,
-    batch_size=128,
-)
-print("Train time", time.time() - start_train_time)
-
-torch.save(model.state_dict(), "models/pytorch.pth")
+if __name__ == "__main__":
+    main()

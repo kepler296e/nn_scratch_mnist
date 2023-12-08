@@ -5,8 +5,6 @@ import torch.optim as optim
 import nn_data
 import time
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
 
 def main():
     # Load data
@@ -17,12 +15,12 @@ def main():
     X_val = X_val.reshape(-1, 1, 28, 28)
 
     # Build model
-    model = CNN().to(DEVICE)
+    model = CNN().to(nn_data.DEVICE)
     print(model.count_params(), "parameters")
 
     # Train
     start_train_time = time.time()
-    model.train(
+    model.fit(
         X_train,
         y_train,
         X_val,
@@ -35,6 +33,21 @@ def main():
     print("Train time", time.time() - start_train_time)
 
     torch.save(model.state_dict(), "models/cnn_torch.pth")
+
+    # Test accuracy
+    accuracy = calculate_accuracy(model, X_val, y_val)
+    print("Accuracy:", accuracy)
+
+
+def calculate_accuracy(model, X, y):
+    model.eval()
+    with torch.no_grad():
+        logits = model(X)
+        _, predicted = torch.max(logits, 1)
+        correct = (predicted == y).sum().item()
+        accuracy = correct / len(y)
+    model.train()
+    return accuracy
 
 
 class CNN(nn.Module):
@@ -53,7 +66,7 @@ class CNN(nn.Module):
         X = self.fc1(X)
         return X
 
-    def train(self, X_train, y_train, X_val, y_val, epochs, eval_every, lr, batch_size):
+    def fit(self, X_train, y_train, X_val, y_val, epochs, eval_every, lr, batch_size):
         loss_fn = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=lr)
 
