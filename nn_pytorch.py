@@ -9,7 +9,6 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 class NN(nn.Module):
     def __init__(self):
         super(NN, self).__init__()
-        # self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(28 * 28, 50),
             nn.ReLU(),
@@ -24,8 +23,10 @@ class NN(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    def count_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
     def forward(self, X):
-        # X = self.flatten(X)
         logits = self.linear_relu_stack(X)
         return logits
 
@@ -50,26 +51,16 @@ class NN(nn.Module):
                 optimizer.step()  # updates the parameters based on the current gradient
 
             if (epoch + 1) % eval_every == 0:
-                val_loss = loss_fn(self(X_val), y_val).item()
+                val_loss = loss_fn(self(X_val), y_val).item()  # item() returns the value of this tensor as a standard Python number
                 print(f"Epoch {epoch + 1}/{epochs}, Train loss {train_loss:.4f}, Val loss {val_loss:.4f}")
-
-    def evaluate(self, X_val, y_val):
-        with torch.no_grad():
-            logits = self(X_val)
-            pred = logits.argmax(dim=1)
-            acc = (pred == y_val).float().mean()
-            print(f"Accuracy {acc:.4f}")
 
 
 # Load data
-X_train = torch.tensor(nn_data.X_train, dtype=torch.float32, device=DEVICE)
-y_train = torch.tensor(nn_data.y_train, dtype=torch.long, device=DEVICE)
-X_val = torch.tensor(nn_data.X_val, dtype=torch.float32, device=DEVICE)
-y_val = torch.tensor(nn_data.y_val, dtype=torch.long, device=DEVICE)
+nn_data.load_data(pytorch=True)
 
 # Build model
 model = NN().to(DEVICE)
-print(sum(p.numel() for p in model.parameters() if p.requires_grad), "parameters")
+print(model.count_params(), "parameters")
 
 # Train
 start_train_time = time.time()

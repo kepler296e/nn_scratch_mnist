@@ -7,8 +7,7 @@ import time
 
 def main():
     # Load data
-    X_train, y_train = nn_data.X_train, nn_data.y_train
-    X_val, y_val = nn_data.X_val, nn_data.y_val
+    X_train, y_train, X_val, y_val = nn_data.load_data()
 
     # Build model
     model = NN(layers=[28 * 28, 50, 25, 10])
@@ -152,7 +151,6 @@ class NN:
         print("Accuracy", np.mean(y_pred == y))
 
         # Confusion matrix
-        print("Confusion matrix")
         print(pd.crosstab(y, y_pred, rownames=["True"], colnames=["Pred"]))
 
     def save(self, filepath):

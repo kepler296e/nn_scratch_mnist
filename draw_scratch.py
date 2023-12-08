@@ -1,6 +1,8 @@
 import pygame
 import numpy as np
 import nn_scratch
+import cnn_pytorch
+import torch
 
 WIDTH, HEIGHT = 560, 560
 PROBS_WIDTH = 300
@@ -13,7 +15,8 @@ frames = 0
 cell_size = 20
 cells = np.zeros((WIDTH // cell_size, HEIGHT // cell_size))
 
-model = nn_scratch.load_model("models/scratch.npy")
+scratch_nn = nn_scratch.load_model("models/scratch.npy")
+cnn = cnn_pytorch.load_model("models/cnn_torch.pth")
 y_pred = np.zeros(10)
 
 pygame.font.init()
@@ -50,8 +53,12 @@ def main():
 
         if frames % FPS == 0 and cells.sum() > 0:
             X = get_X() / 255
-            _, y_pred = model.forward(X)
+            # PyTorch CNN
+            X = X.reshape(-1, 1, 28, 28)
+            X = torch.tensor(X, dtype=torch.float32)
+            y_pred = cnn.predict(X)
             y_pred = y_pred[0]
+            pass
 
         SCREEN.fill((0, 0, 0))
         draw()

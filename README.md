@@ -1,6 +1,6 @@
 # Neural Network from Scratch: Digit Recognition
 A fast and cool MLP from scratch in Python that classifies handwritten digits from the [MNIST dataset](#mnist-dataset).
-At the end there is a [comparission](#scratch-vs-tensorflow-vs-pytorch) vs TensorFlow and PyTorch (and the scratch outperforms :p)
+At the end there is a [comparission](#scratch-vs-tensorflow-vs-pytorch) vs TensorFlow and PyTorch (and the scratch model outperforms :p)
 
 Video (Spanish): https://www.youtube.com/watch?v=0eb_RSzP3rY
 
@@ -241,17 +241,22 @@ if frames % FPS == 0 and cells.sum() > 0:
 <img src="screenshots/3.png" width="50%" height="50%">
 
 ## Scratch vs. TensorFlow vs. PyTorch
-Using batch parallelization, the Scratch model outperforms the TensorFlow implementation in time, but accuracy is pretty much the same. The idea of the project was to learn how neural networks work, so I didn't focus on performance >:p
-| | nrows | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Scratch | 60K | 10 | 128 | 0.0841 | 0.1345 | 5.1375 | 0.01 |
-| TensorFlow | 60K | 10 | 128 | 0.0710 | 0.1556 | 6.7309 | Adam(0.01) |
-| PyTorch | 60K | 10 | 128 | 0.0793 | 0.1490 | 8.1293 | Adam(0.01) |
+Using batch parallelization, the scratch model outperforms TensorFlow and Pytorch in time and validation loss, even that the idea of the project was to learn how neural networks work, so I didn't focus on performance >:p
+| | Epochs | Batch | Train | Validation | Time s | $\alpha$ |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Scratch | 10 | 128 | 0.0841 | 0.1334 | 5.20 | 0.01 |
+| TensorFlow | 10 | 128 | 0.0672 | 0.1640 | 8.26 | Adam(0.01) |
+| PyTorch | 10 | 128 | 0.0748 | 0.1612 | 8.26 | Adam(0.01) |
+| PyTorch CNN | 1 | 128 | 0.2048 | 0.0660 | 9.62 | Adam(0.01) |
 
-[nn_scratch.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_scratch.py)
+Random seeds are set to 42 for reproducibility, so you can get the same results on your own device.
 
-[nn_tf.py](https://github.com/kepler296e/nn_scratch_mnist/blob/main/nn_tf.py)
+[nn_scratch.py](nn_scratch.py)
+
+[nn_tf.py](nn_tf.py)
 
 [nn_torch.py](nn_pytorch.py)
+
+[nn_torch_cnn.py](nn_pytorch_cnn.py)
 
 That's all, it was such a fun project! bye

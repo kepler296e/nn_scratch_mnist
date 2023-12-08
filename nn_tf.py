@@ -3,8 +3,7 @@ import nn_data
 import time
 
 # Load data
-X_train, y_train = nn_data.X_train, nn_data.y_train
-X_val, y_val = nn_data.X_val, nn_data.y_val
+X_train, y_train, X_val, y_val = nn_data.load_data()
 
 # Build model
 model = tf.keras.models.Sequential(
@@ -17,7 +16,7 @@ model = tf.keras.models.Sequential(
 )
 
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(lr=0.01),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
 )
 
